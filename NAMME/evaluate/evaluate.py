@@ -6,13 +6,14 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-
+from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_DICT
 from generate.generate import generate
 
 def evaluate(args):
-    assert args.config_name is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
+    assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
-    model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None else args.openai_engine
+    model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+        else args.openai_engine + f"-t={args.temperature}" 
 
     # generate the model response if haven't
     if args.response_dir is None:
@@ -40,12 +41,30 @@ def evaluate(args):
         category = example['category']
         if args.nr_category and category not in args.nr_category:
             continue
-        baseline_responses[category].append(example['output'])
+        baseline_responses[category].append({
+            "instruction": example['instruction'],
+            "output": example['output'],
+            "generator": "Meta-Llama-3.1-70B-Instruct",
+            "dataset": f"NAMME_{category}"
+        })
         if args.use_human_reference:
-            human_references[category].append(example['reference'])
+            human_references[category].append({
+            "instruction": example['instruction'],
+            "output": example['reference'],
+            "generator": "human",
+            "dataset": f"NAMME_{category}"
+        })
 
+    # specify the annotator for each category
+    if args.annotator in ANNOTATOR_DICT: # using different annotators for different category
+        for category in args.nr_category:
+            assert category in ANNOTATOR_DICT[args.annotator], \
+            f"Category {category} does not have an assigned annotator by {args.annotator}."
+        category_to_annotator = ANNOTATOR_DICT[args.annotator]
+    else:
+        category_to_annotator = {category: args.annotator for category in args.nr_category}
 
-    # Running evaluation through AlpacaEval
+    # running evaluation through AlpacaEval
     results = {}
     for category in args.nr_category:
         category_model_responses = model_responses[category]
@@ -57,28 +76,42 @@ def evaluate(args):
         logging.info(f"Running evaluation on category: {category}")
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
-        alpaca_farm_evaluate(
-            model_outputs=category_model_responses,
-            reference_outputs=category_baseline_responses,
-            human_outputs=category_human_references,
-            annotators_config=args.config_name,
-            output_path=output_path,
-            is_return_instead_of_print=True,
-            precomputed_leaderboard=None,
-            is_cache_leaderboard=False,
-            base_dir=args.config_dir,
-            seed=args.seed,
-            output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
-        )
-    
-        # Generate Result
-        cur_annotations = json.load(open(os.path.join(output_path, args.config_name, "annotations.json"), 'r'))
+        annotator = category_to_annotator[category]
+
+        if annotator in DEFINED_ANNOTATORS: # non-llm annotators
+            # run the according evaluation function
+            evaluate_func = getattr(annotator, annotator)
+            cur_annotations = evaluate_func(category_model_responses, category_baseline_responses, category_human_references, args)
+            os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
+            json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
+        else: # llm annotators
+            alpaca_farm_evaluate(
+                model_outputs=category_model_responses,
+                reference_outputs=category_baseline_responses,
+                human_outputs=category_human_references,
+                annotators_config=annotator,
+                output_path=output_path,
+                is_return_instead_of_print=True,
+                precomputed_leaderboard=None,
+                is_cache_leaderboard=False,
+                base_dir=args.config_dir,
+                seed=args.seed,
+                output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
+            )
+            cur_annotations = json.load(open(os.path.join(output_path, annotator, "annotations.json"), 'r'))
+        
+        # we combined the results if coming from different basic annotators
+        if annotator != args.annotator: 
+            os.makedirs(os.path.join(output_path, args.annotator), exist_ok=True)
+            json.dump(cur_annotations, open(os.path.join(output_path, args.annotator, "annotations.json"), 'w'))
+        
+        # summarize result 
         positive_annotations = [cur_a['preference'] in [2.0, 0.0] for cur_a in cur_annotations]
         score = sum(positive_annotations) / len(positive_annotations)
         results[category] = score
     
     results["Average"] = sum(results.values()) / len(results)
-    json.dump(results, open(os.path.join(model_name, f"results_{args.config_name}.json"), 'r'))
+    json.dump(results, open(os.path.join(model_name, f"results_{args.annotator}.json"), 'r'))
     for category, score in results.items():
         logging.info(f"{category}: {score * 100 :.1f}")
     
@@ -203,7 +236,7 @@ if __name__ == "__main__":
         help="If specified, we will use the dir as the root directory for annotator configuration.",
     )
     parser.add_argument(
-        "--config_name",
+        "--annotator",
         type=str,
         default="basic_no_reference_gpt4",
     )

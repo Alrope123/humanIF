@@ -34,7 +34,7 @@ def main(args):
     with open("config_template.yaml", 'r') as f:
         config = yaml.safe_load(f)
     # load config setting
-    model_configs = json.load(open("config_settings.json", 'r'))[model]
+    model_configs = json.load(open("model_settings.json", 'r'))[model]
     # load selected template
     with open(os.path.join("templates", f"{template_name}.txt"), 'r') as f:
         template = f.read()

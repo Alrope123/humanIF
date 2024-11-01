@@ -246,7 +246,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config_name",
         type=str,
-        default="alpaca_eval_gpt4",
+        default="basic_no_reference_gpt4",
     )
     parser.add_argument(
         "--use_human_reference",
