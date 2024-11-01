@@ -1,0 +1,55 @@
+{beginning}{normal_message_start}{system_identifier}
+{system_message}{model_message_end}{normal_message_start}{user_identifier}
+Decide which response from the AI system following the instruction is better, considering the following questions:
+
+1. Does the response precisely follow the instruction? For example, a response that includes unrelated information or does not fulfill the task is not precisely following the instruction. 
+2. Is the response helpful? For example, if the instruction asks for a recipe for healthy food, and the response is a useful recipe, then you can consider it helpful.
+3. Is the response language natural? For example, AI responses are often verbose or repetitive, which is not natural.
+4. Is the response factual/accurate? AI responses often make up new information. For example, if the response claims that Donald Trump is the current U.S. president, then you should consider it inaccurate.
+5. Based on your aesthetics, which one do you prefer? For example, you might prefer one poem over another poem.
+
+Select the response A or B that you prefer, or select tie if the two responses are similarly good or bad. Your answer should ONLY contain: A or B or tie.{example_begin} Here are two examples:
+
+# Example:
+## Instruction:
+What type of Rifle is an AK47? 
+
+## Response A:
+An AK47 is a type of assault rifle.
+
+## Response B:
+The AK47 is a type of rifle that is commonly associated with Soviet and Russian military forces. It is a semi-automatic assault rifle that is chambered in 7.62x39mm and is considered to be one of the most popular and widely used firearms in the world. The AK47 is known for its durability, reliability, and accuracy, and it is able to fire up to 45 rounds per minute. It is also popular among civilians due to its low cost and ease of use. The AK47 is an iconic weapon that has been featured in numerous movies, video games, and other pop culture references.
+
+Here A directly and concisely answers the type of AK47 as asked by the instruction. In contrast, B is too verbose and talks about AK47’s background, advantages, and influence, which are unrelated to the instruction.
+## Which is best, A, B, or tie?
+A
+
+# Example:
+## Instruction:
+Given a table of data, compute the average
+Table of data: 
+1, 3, 5, 6, 9
+
+## Response A:
+The average is 5.
+
+## Response B:
+4.75
+
+Here B is more accurate than A because 4.75 from B is closer to the correct average 4.8 than 5 from A.
+## Which is best, A, B, or tie?
+B{example_end}
+
+
+Now is the real task, just select among: A, B, or tie.
+# Task:
+## Instruction:
+{instruction}
+
+## Response A:
+{output_1}
+
+## Response B:
+{output_2}
+
+## Which is best, A, B, or tie?{user_message_end}
