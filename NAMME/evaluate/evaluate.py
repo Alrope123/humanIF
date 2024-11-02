@@ -49,11 +49,11 @@ def evaluate(args):
         })
         if args.use_human_reference:
             human_references[category].append({
-            "instruction": example['instruction'],
-            "output": example['reference'],
-            "generator": "human",
-            "dataset": f"NAMME_{category}"
-        })
+                "instruction": example['instruction'],
+                "output": example['reference'],
+                "generator": "human",
+                "dataset": f"NAMME_{category}"
+            })
 
     # specify the annotator for each category
     if args.annotator in ANNOTATOR_DICT: # using different annotators for different category

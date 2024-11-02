@@ -6,6 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
+from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_DICT
 from collections import Counter
 
 
@@ -80,13 +81,36 @@ def evaluate(args):
             continue
         data[category].append(example)
 
+    # specify the annotator for each category
+    if args.annotator in ANNOTATOR_DICT: # using different annotators for different category
+        for category in args.nr_category:
+            assert category in ANNOTATOR_DICT[args.annotator], \
+            f"Category {category} does not have an assigned annotator by {args.annotator}."
+        category_to_annotator = ANNOTATOR_DICT[args.annotator]
+    else:
+        category_to_annotator = {category: args.annotator for category in args.nr_category}
+
     # running evaluation through AlpacaEval
-    results = {}
     for category in args.nr_category:
-        category_responses_a = [dp['output_1'] for dp in data[category]]
-        category_responses_b = [dp['output_2'] for dp in data[category]]
+        category_responses_a = [{
+            "instruction": dp['instruction'],
+            "output": dp['output_a'],
+            "generator": dp['generator_a'],
+            "dataset": f"NAMME_{category}"
+        } for dp in data[category]]
+        category_responses_b = [{
+            "instruction": dp['instruction'],
+            "output": dp['output_b'],
+            "generator": dp['generator_b'],
+            "dataset": f"NAMME_{category}"
+        } for dp in data[category]]
         if args.use_human_reference:
-            category_human_references = [dp['human_reference'] for dp in data[category]]
+            category_human_references = [{
+                "instruction": dp['instruction'],
+                "output": dp['reference'],
+                "generator": "human",
+                "dataset": f"NAMME_{category}"
+            } for dp in data[category]]
         else:
             category_human_references = None
         logging.info(f"Running evaluation on category: {category}")
@@ -94,30 +118,46 @@ def evaluate(args):
             else args.openai_engine + f"-t={args.temperature}"
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
-        alpaca_farm_evaluate(
-            model_outputs=category_responses_a,
-            reference_outputs=category_responses_b,
-            human_outputs=category_human_references,
-            annotators_config=args.config_name,
-            output_path=output_path,
-            is_return_instead_of_print=True,
-            precomputed_leaderboard=None,
-            is_cache_leaderboard=False,
-            base_dir=args.config_dir,
-            seed=args.seed,
-            output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
-        )
-    
+        annotator = category_to_annotator[category]
+
+        if annotator in DEFINED_ANNOTATORS: # non-llm annotators
+            # run the according evaluation function
+            evaluate_func = getattr(annotator, annotator)
+            cur_annotations = evaluate_func(category_responses_a, category_responses_b, category_human_references, args)
+            os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
+            json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
+        else: # llm annotators
+            alpaca_farm_evaluate(
+                model_outputs=category_responses_a,
+                reference_outputs=category_responses_b,
+                human_outputs=category_human_references,
+                annotators_config=annotator,
+                output_path=output_path,
+                is_return_instead_of_print=True,
+                precomputed_leaderboard=None,
+                is_cache_leaderboard=False,
+                base_dir=args.config_dir,
+                seed=args.seed,
+                output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
+            )
+            cur_annotations = json.load(open(os.path.join(output_path, annotator, "annotations.json"), 'r'))
+        
+        # we combined the results if coming from different basic annotators
+        if annotator != args.annotator: 
+            os.makedirs(os.path.join(output_path, args.annotator), exist_ok=True)
+            json.dump(cur_annotations, open(os.path.join(output_path, args.annotator, "annotations.json"), 'w'))
+
+
     # calculate agreement with human
     cur_annotations = json.load(open(os.path.join(output_path, args.config_name, "annotations.json"), 'r'))
     prompt_to_annotation = {}
     for a in cur_annotations:
-        prompt_to_annotation[a["instruction"], a["generator_1"], a["generator_2"]] = int(a)
+        prompt_to_annotation[a["instruction"], a["generator_a"], a["generator_b"]] = int(a)
     rates_inner = []
     rates_outer = []
     for dp in data:
         rates_inner.append(leave_one_out_agreement_inner(dp['annotations']))
-        rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['model_1'], dp['model_2']]))
+        rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['model_a'], dp['model_b']]))
     agreement_rate_inner = sum(rates_inner) / len(rates_inner)
     agreement_rate_outer = sum(rates_outer) / len(rates_outer)
     logging.info(f"Inner human agreement rate: {agreement_rate_inner * 100 : .1f}")
@@ -244,7 +284,7 @@ if __name__ == "__main__":
         help="If specified, we will use the dir as the root directory for annotator configuration.",
     )
     parser.add_argument(
-        "--config_name",
+        "--annotator",
         type=str,
         default="basic_no_reference_gpt4",
     )
