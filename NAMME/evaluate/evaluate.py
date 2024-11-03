@@ -30,7 +30,7 @@ def evaluate(args):
     model_responses = defaultdict(list)
     for category in args.nr_category:
         with open(os.path.join(response_dir, category.lower().replace(" ", "_"), "responses.jsonl"), "r") as fin:
-            model_responses[category].extend([json.loads(line) for line in fin])
+            model_responses[category].append(json.loads(line) for line in fin)
 
     # load baseline model response and/or human response
     NAMME_data = datasets.load_dataset(args.dataset)[args.split]
