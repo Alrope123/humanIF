@@ -6,7 +6,7 @@ import asyncio
 import os
 from importlib import import_module
 from transformers import StoppingCriteria, pipeline
-from generate.dispatch_openai_requests import dispatch_openai_chat_requesets, dispatch_openai_prompt_requesets
+from NAMME.generate.dispatch_openai_requests import dispatch_openai_chat_requesets, dispatch_openai_prompt_requesets
 import warnings
 
 
@@ -222,13 +222,6 @@ def load_hf_lm(
         token=os.getenv("HF_TOKEN", None),
     ):
 
-    # Loading OLMo models from HF requires `trust_remote_code=True`.
-    # TODO: Implement this via command-line flag rather than hardcoded list.
-    # trusted_models = ["allenai/OLMo-7B", "allenai/OLMo-7B-Twin-2T", "allenai/OLMo-1B", "deepseek-ai/DeepSeek-Coder-V2-Instruct"]
-    # if model_name_or_path in trusted_models:
-    #     trust_remote_code = True
-    # else:
-    #     trust_remote_code = False
     trust_remote_code = True
 
     from transformers import AutoModelForCausalLM, AutoTokenizer, OPTForCausalLM, GPTNeoXForCausalLM
@@ -277,12 +270,6 @@ def load_hf_tokenizer(
         token=os.getenv("HF_TOKEN", None),
     ):
         from transformers import AutoTokenizer
-
-        # Need to explicitly import the olmo tokenizer.
-        try:
-            from hf_olmo import OLMoTokenizerFast
-        except ImportError:
-            warnings.warn("OLMo not installed. Ignore if using a different model.")
 
         if not tokenizer_name_or_path:
             tokenizer_name_or_path = model_name_or_path

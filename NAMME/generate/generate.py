@@ -9,7 +9,7 @@ import datasets
 import vllm
 from openai import OpenAI
 
-from generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
+from NAMME.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
 
 
 def generate(args):
@@ -62,18 +62,18 @@ def generate(args):
                 tokenizer.model_max_length = model.config.max_position_embeddings
                 logging.info("Set tokenizer.model_max_length to model.config.max_position_embeddings: {}".format(model.config.max_position_embeddings))
 
-            # apply chat format
-            if args.use_chat_format:
-                prompts = {}
-                for category, category_prompts in raw_text_prompts.items():
-                    formatted_prompts = []
-                    for prompt in category_prompts:
-                        messages = [{"role": "user", "content": prompt}]
-                        prompt = chat_formatting_function(messages, tokenizer, add_bos=False)
-                        formatted_prompts.append(prompt)
-                    prompts[category] = formatted_prompts
-            else:
-                prompts = dict(raw_text_prompts)
+        # apply chat format
+        if args.use_chat_format:
+            prompts = {}
+            for category, category_prompts in raw_text_prompts.items():
+                formatted_prompts = []
+                for prompt in category_prompts:
+                    messages = [{"role": "user", "content": prompt}]
+                    prompt = chat_formatting_function(messages, tokenizer, add_bos=False)
+                    formatted_prompts.append(prompt)
+                prompts[category] = formatted_prompts
+        else:
+            prompts = dict(raw_text_prompts)
     else: # openai model
         openai_client = OpenAI()
         prompts = dict(raw_text_prompts)
@@ -117,8 +117,8 @@ def generate(args):
                 
 
         # save the outputs
-        model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine + f"-t={args.temperature}" 
+        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine) + f"-t={args.temperature}" 
         save_dir = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(save_dir, exist_ok=True)
         with open(os.path.join(save_dir, f"responses.jsonl"), "w") as fout:
@@ -143,21 +143,20 @@ if __name__ == "__main__":
     parser.add_argument(
         "--split",
         type=str,
-        default="dev",
+        default="train",
         help="The split of the dataset to use."
     )
     parser.add_argument(
         "--nr_category",
         type=str,
-        default=["Generation", "Open QA", "Brainstorm", "Chat", "Rewrite", "Summarize",
-                 "Coding", "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize", "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
         nargs="+",
         help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
     )
     parser.add_argument(
         "--save_dir",
         type=str, 
-        default="results/alpaca_farm"
+        default="results"
     )
     parser.add_argument(
         "--model_name_or_path",
@@ -228,7 +227,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--temperature",
         type=float,
-        default=1.0,
+        default=0.0,
         help="The temperature we use for model generation.",
     )
     parser.add_argument(

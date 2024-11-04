@@ -7,7 +7,7 @@ from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
 from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_DICT
-from generate.generate import generate
+import NAMME.evaluate.basic_annotators as annotator_funcs
 
 def evaluate(args):
     assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
@@ -17,9 +17,10 @@ def evaluate(args):
 
     # generate the model response if haven't
     if args.response_dir is None:
+        from NAMME.generate.generate import generate
         generate(args)
-        model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine + f"-t={args.temperature}"
+        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine) + f"-t={args.temperature}"
         logging.info(f"Generating responses from {model_name}")
         response_dir = os.path.join(args.save_dir, model_name)
     else:
@@ -30,7 +31,7 @@ def evaluate(args):
     model_responses = defaultdict(list)
     for category in args.nr_category:
         with open(os.path.join(response_dir, category.lower().replace(" ", "_"), "responses.jsonl"), "r") as fin:
-            model_responses[category].append(json.loads(line) for line in fin)
+            model_responses[category].extend([json.loads(line) for line in fin])
 
     # load baseline model response and/or human response
     NAMME_data = datasets.load_dataset(args.dataset)[args.split]
@@ -80,8 +81,8 @@ def evaluate(args):
 
         if annotator in DEFINED_ANNOTATORS: # non-llm annotators
             # run the according evaluation function
-            evaluate_func = getattr(annotator, annotator)
-            cur_annotations = evaluate_func(category_model_responses, category_baseline_responses, category_human_references, args)
+            evaluate_func = getattr(annotator_funcs, annotator)
+            cur_annotations = evaluate_func(category_baseline_responses, category_model_responses, category_human_references, args)
             os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
             json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
         else: # llm annotators
@@ -111,13 +112,36 @@ def evaluate(args):
         results[category] = score
     
     results["Average"] = sum(results.values()) / len(results)
-    json.dump(results, open(os.path.join(model_name, f"results_{args.annotator}.json"), 'r'))
+    json.dump(results, open(os.path.join(args.save_dir, model_name, f"results_{args.annotator}.json"), 'w'))
     for category, score in results.items():
         logging.info(f"{category}: {score * 100 :.1f}")
     
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # evaluation arguments
+    parser.add_argument(
+        "--response_dir",
+        type=str, 
+        default="results/alpaca_farm",
+        help="If specified, we will load the model responses from the directory"
+    )
+    parser.add_argument(
+        "--config_dir",
+        type=str,
+        default="NAMME/LLM-as-a-Judge/configs",
+        help="If specified, we will use the dir as the root directory for annotator configuration.",
+    )
+    parser.add_argument(
+        "--annotator",
+        type=str,
+        default="basic_no_reference_gpt4",
+    )
+    parser.add_argument(
+        "--use_human_reference",
+        action="store_true",
+        help="If given, we will embed human response into the prompt."
+    )
     # generation arguments
     parser.add_argument(
         "--dataset",
@@ -128,21 +152,21 @@ if __name__ == "__main__":
     parser.add_argument(
         "--split",
         type=str,
-        default="dev",
+        default="train",
         help="The split of the dataset to use."
     )
     parser.add_argument(
         "--nr_category",
         type=str,
-        default=["Generation", "Open QA", "Brainstorm", "Chat", "Rewrite", "Summarize",
-                 "Coding", "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
+                 "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
         nargs="+",
         help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
     )
     parser.add_argument(
         "--save_dir",
         type=str, 
-        default="results/alpaca_farm"
+        default="results"
     )
     parser.add_argument(
         "--model_name_or_path",
@@ -221,29 +245,6 @@ if __name__ == "__main__":
         type=str,
         default="cache",
         help="The directory to store downloaded datasets and models.",
-    )
-    # evaluation arguments
-    parser.add_argument(
-        "--response_dir",
-        type=str, 
-        default="results/alpaca_farm",
-        help="If specified, we will load the model responses from the directory"
-    )
-    parser.add_argument(
-        "--config_dir",
-        type=str,
-        default=None,
-        help="If specified, we will use the dir as the root directory for annotator configuration.",
-    )
-    parser.add_argument(
-        "--annotator",
-        type=str,
-        default="basic_no_reference_gpt4",
-    )
-    parser.add_argument(
-        "--use_human_reference",
-        action="store_true",
-        help="If given, we will embed human response into the prompt."
     )
     args = parser.parse_args()
     

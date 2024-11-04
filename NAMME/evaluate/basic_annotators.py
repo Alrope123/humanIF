@@ -21,7 +21,6 @@ DEFINED_ANNOTATORS = ["short", "long", "random", "bertscore", "rouge-1"]
 def bertscore(responses_1, responses_2, human_references, args):
     from bert_score import BERTScorer
     scorer = BERTScorer(lang="en")
-
     # calculate score
     _, _, f1s_1 = scorer.score([res['output'] for res in responses_1], [res['output'] for res in human_references])
     _, _, f1s_2 = scorer.score([res['output'] for res in responses_2], [res['output'] for res in human_references])

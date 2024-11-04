@@ -114,8 +114,8 @@ def evaluate(args):
         else:
             category_human_references = None
         logging.info(f"Running evaluation on category: {category}")
-        model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine + f"-t={args.temperature}"
+        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine) + f"-t={args.temperature}"
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
         annotator = category_to_annotator[category]

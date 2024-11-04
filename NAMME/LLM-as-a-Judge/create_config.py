@@ -31,12 +31,13 @@ def main(args):
     do_sampling = args.do_sampling
     
     # load config template
-    with open("config_template.yaml", 'r') as f:
+    root_directory = os.path.join("NAMME", "LLM-as-a-Judge")
+    with open(os.path.join(root_directory, "config_template.yaml"), 'r') as f:
         config = yaml.safe_load(f)
     # load config setting
-    model_configs = json.load(open("model_settings.json", 'r'))[model]
+    model_configs = json.load(open(os.path.join(root_directory, "model_settings.json"), 'r'))[model]
     # load selected template
-    with open(os.path.join("templates", f"{template_name}.txt"), 'r') as f:
+    with open(os.path.join(root_directory, "prompt_templates", f"{template_name}.txt"), 'r') as f:
         template = f.read()
     
     # modify the config name
@@ -53,11 +54,12 @@ def main(args):
             config[template_name][k] = v
     
     # do sampling while judging
-    if do_sampling and model not in ["gpt4", "gpt4-turbo"]:
-        config[template_name]["completions_kwargs"]["do_sample"] = True
-        config[template_name]["completions_kwargs"]["temperature"] = 0.9
-    else:
-        config[template_name]["completions_kwargs"]["temperature"] = 0.9
+    if do_sampling:
+        if model not in ["gpt4", "gpt4-turbo"]:
+            config[template_name]["completions_kwargs"]["do_sample"] = True
+            config[template_name]["completions_kwargs"]["temperature"] = 0.9
+        else:
+            config[template_name]["completions_kwargs"]["temperature"] = 0.9
 
     # whether to exclude demonstrations
     if no_example:
@@ -91,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="eval/alpaca_farm/configs",
+        default="NAMME/LLM-as-a-Judge/configs",
     )
 
     parser.add_argument(
