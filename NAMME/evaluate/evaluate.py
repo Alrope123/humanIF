@@ -12,8 +12,8 @@ import NAMME.evaluate.basic_annotators as annotator_funcs
 def evaluate(args):
     assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
-    model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-        else args.openai_engine + f"-t={args.temperature}" 
+    model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+        else args.openai_engine) + f"-t={args.temperature}" 
 
     # generate the model response if haven't
     if args.response_dir is None:
@@ -86,6 +86,8 @@ def evaluate(args):
             os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
             json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
         else: # llm annotators
+            cache_dir = os.path.join(args.cache_dir, model_name, category.lower().replace(" ", "_"))
+            os.makedirs(cache_dir)
             alpaca_farm_evaluate(
                 model_outputs=category_model_responses,
                 reference_outputs=category_baseline_responses,
@@ -93,6 +95,7 @@ def evaluate(args):
                 annotators_config=annotator,
                 output_path=output_path,
                 is_return_instead_of_print=True,
+                caching_path=os.path.join(cache_dir, f"{annotator}.json"),
                 precomputed_leaderboard=None,
                 is_cache_leaderboard=False,
                 base_dir=args.config_dir,
@@ -237,7 +240,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--temperature",
         type=float,
-        default=1.0,
+        default=0.0,
         help="The temperature we use for model generation.",
     )
     parser.add_argument(
