@@ -176,7 +176,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--split",
         type=str,
-        default="dev",
+        default="train",
         help="The split of the dataset to use."
     )
     parser.add_argument(
@@ -261,7 +261,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--temperature",
         type=float,
-        default=1.0,
+        default=0.0,
         help="The temperature we use for model generation.",
     )
     parser.add_argument(

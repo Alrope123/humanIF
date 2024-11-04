@@ -1,4 +1,4 @@
-git+https://github.com/Alrope123/alpaca_eval.git@9ab7eb79bdee8d44b214967b1c2607f7ea5b6bd7
+git+https://github.com/Alrope123/alpaca_eval.git # modified version for using human reference
 datasets
 openai
 asyncio
