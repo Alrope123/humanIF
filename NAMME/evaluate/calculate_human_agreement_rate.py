@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_DICT
+from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
 from collections import Counter
 
 
@@ -68,9 +68,7 @@ def LOO_agreement(human_prefs, my_p):
 
 
 def evaluate(args):
-    assert args.config_name is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
-    assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
-    model_name = os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None else args.openai_engine
+    assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
 
     # load model responses
     NAMME_data = datasets.load_dataset(args.dataset)[args.split]
@@ -82,16 +80,22 @@ def evaluate(args):
         data[category].append(example)
 
     # specify the annotator for each category
-    if args.annotator in ANNOTATOR_DICT: # using different annotators for different category
+    if args.annotator in ANNOTATOR_GROUP_DICT: # using different annotators for different category
         for category in args.nr_category:
-            assert category in ANNOTATOR_DICT[args.annotator], \
+            assert category in ANNOTATOR_GROUP_DICT[args.annotator], \
             f"Category {category} does not have an assigned annotator by {args.annotator}."
-        category_to_annotator = ANNOTATOR_DICT[args.annotator]
-    else:
-        category_to_annotator = {category: args.annotator for category in args.nr_category}
+        category_to_annotator = ANNOTATOR_GROUP_DICT[args.annotator]
+    else: # one single annotator for all categories
+        category_to_annotator = {category: {
+                                    'annotator': args.annotator, 
+                                    'use_human_ref': args.use_human_reference} 
+                                for category in args.nr_category}
 
     # running evaluation through AlpacaEval
     for category in args.nr_category:
+        annotator = category_to_annotator[category]['annotator']
+        use_human_reference = category_to_annotator[category]['use_human_ref']
+
         category_responses_a = [{
             "instruction": dp['instruction'],
             "output": dp['output_a'],
@@ -104,7 +108,7 @@ def evaluate(args):
             "generator": dp['generator_b'],
             "dataset": f"NAMME_{category}"
         } for dp in data[category]]
-        if args.use_human_reference:
+        if use_human_reference:
             category_human_references = [{
                 "instruction": dp['instruction'],
                 "output": dp['reference'],
@@ -114,11 +118,8 @@ def evaluate(args):
         else:
             category_human_references = None
         logging.info(f"Running evaluation on category: {category}")
-        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) + f"-t={args.temperature}"
-        output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
-        os.makedirs(output_path, exist_ok=True)
-        annotator = category_to_annotator[category]
+        output_path = os.path.join(args.save_dir, "human_agreement_analysis", category.lower().replace(" ", "_"))
+        os.makedirs(output_path, exist_ok=True)        
 
         if annotator in DEFINED_ANNOTATORS: # non-llm annotators
             # run the according evaluation function
@@ -127,6 +128,8 @@ def evaluate(args):
             os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
             json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
         else: # llm annotators
+            cache_dir = os.path.join(args.cache_dir, "human_agreement_analysis", category.lower().replace(" ", "_"))
+            os.makedirs(cache_dir, exist_ok=True)
             alpaca_farm_evaluate(
                 model_outputs=category_responses_a,
                 reference_outputs=category_responses_b,
@@ -134,11 +137,12 @@ def evaluate(args):
                 annotators_config=annotator,
                 output_path=output_path,
                 is_return_instead_of_print=True,
+                caching_path=os.path.join(cache_dir, f"{annotator}.json"),
                 precomputed_leaderboard=None,
                 is_cache_leaderboard=False,
                 base_dir=args.config_dir,
                 seed=args.seed,
-                output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
+                output_keys=("output_1", "output_2", "output_human") if use_human_reference else ("output_1", "output_2")
             )
             cur_annotations = json.load(open(os.path.join(output_path, annotator, "annotations.json"), 'r'))
         
@@ -148,24 +152,42 @@ def evaluate(args):
             json.dump(cur_annotations, open(os.path.join(output_path, args.annotator, "annotations.json"), 'w'))
 
 
-    # calculate agreement with human
-    cur_annotations = json.load(open(os.path.join(output_path, args.config_name, "annotations.json"), 'r'))
-    prompt_to_annotation = {}
-    for a in cur_annotations:
-        prompt_to_annotation[a["instruction"], a["generator_a"], a["generator_b"]] = int(a)
-    rates_inner = []
-    rates_outer = []
-    for dp in data:
-        rates_inner.append(leave_one_out_agreement_inner(dp['annotations']))
-        rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['model_a'], dp['model_b']]))
-    agreement_rate_inner = sum(rates_inner) / len(rates_inner)
-    agreement_rate_outer = sum(rates_outer) / len(rates_outer)
-    logging.info(f"Inner human agreement rate: {agreement_rate_inner * 100 : .1f}")
-    logging.info(f"Human agreement rate using {args.config_name}: {agreement_rate_outer * 100 : .1f}")
+        # calculate agreement with human
+        cur_annotations = json.load(open(os.path.join(output_path, args.annotator, "annotations.json"), 'r'))
+        prompt_to_annotation = {}
+        for a in cur_annotations:
+            prompt_to_annotation[a["instruction"], a["generator_2"], a["generator_1"]] = int(a["preference"])
+        rates_inner = []
+        rates_outer = []
+        for dp in data[category]:
+            rates_inner.append(leave_one_out_agreement_inner(dp['annotations']))
+            rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['generator_a'], dp['generator_b']]))
+        agreement_rate_inner = sum(rates_inner) / len(rates_inner)
+        agreement_rate_outer = sum(rates_outer) / len(rates_outer)
+        logging.info(f"Category: {category}")
+        logging.info(f"Inner human agreement rate: {agreement_rate_inner * 100 : .1f}%")
+        logging.info(f"Human agreement rate using {args.annotator}: {agreement_rate_outer * 100 : .1f}%")
         
     
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
+    # evaluation arguments
+    parser.add_argument(
+        "--annotator",
+        type=str,
+        default="basic_no_reference_gpt4",
+    )
+    parser.add_argument(
+        "--config_dir",
+        type=str,
+        default="NAMME/LLM-as-a-Judge/configs",
+        help="If specified, we will use the dir as the root directory for annotator configuration.",
+    )
+    parser.add_argument(
+        "--use_human_reference",
+        action="store_true",
+        help="If given, we will embed human response into the prompt."
+    )
     # generation arguments
     parser.add_argument(
         "--dataset",
@@ -190,68 +212,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--save_dir",
         type=str, 
-        default="results/alpaca_farm"
-    )
-    parser.add_argument(
-        "--model_name_or_path",
-        type=str,
-        default=None,
-        help="If specified, we will load the model to generate the predictions.",
-    )
-    parser.add_argument(
-        "--openai_engine",
-        type=str,
-        default="gpt-3.5-turbo",
-        help="If specified, we will use the OpenAI API to generate the predictions.",
-    )
-    parser.add_argument(
-        "--use_vllm",
-        action="store_true",
-        help="If given, we will use vLLM to generate the predictions - much faster.",
-    )
-    parser.add_argument(
-        "--tokenizer_name_or_path",
-        type=str,
-        default=None,
-        help="If specified, we will load the tokenizer from here.",
-    )
-    parser.add_argument(
-        "--use_slow_tokenizer",
-        action="store_true",
-        help="If given, we will use the slow tokenizer."
-    )
-    parser.add_argument(
-        "--max_new_tokens",
-        type=int,
-        default=8192,
-        help="Maximum number of new tokens to generate."
-    )
-    parser.add_argument(
-        "--eval_batch_size", 
-        type=int, 
-        default=1, 
-        help="Batch size for evaluation."
-    )
-    parser.add_argument(
-        "--load_in_8bit",
-        action="store_true",
-        help="Load model in 8bit mode, which will reduce memory and speed up inference.",
-    )
-    parser.add_argument(
-        "--gptq",
-        action="store_true",
-        help="If given, we're evaluating a 4-bit quantized GPTQ model.",
-    )
-    parser.add_argument(
-        "--use_chat_format", 
-        action="store_true", 
-        help="If given, we will use the chat format for the prompts."
-    )
-    parser.add_argument(
-        "--chat_formatting_function", 
-        type=str, 
-        default="generate.templates.create_prompt_with_huggingface_tokenizer_template", 
-        help="The function to use to create the chat format. This function will be dynamically imported. Please see examples in `eval/templates.py`."
+        default="results"
     )
     parser.add_argument(
         "--seed",
@@ -259,41 +220,11 @@ if __name__ == "__main__":
         default=42
     )
     parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="The temperature we use for model generation.",
-    )
-    parser.add_argument(
         "--cache_dir",
         type=str,
         default="cache",
         help="The directory to store downloaded datasets and models.",
     )
-    # evaluation arguments
-    parser.add_argument(
-        "--response_dir",
-        type=str, 
-        default="results/alpaca_farm",
-        help="If specified, we will load the model responses from the directory"
-    )
-    parser.add_argument(
-        "--config_dir",
-        type=str,
-        default=None,
-        help="If specified, we will use the dir as the root directory for annotator configuration.",
-    )
-    parser.add_argument(
-        "--annotator",
-        type=str,
-        default="basic_no_reference_gpt4",
-    )
-    parser.add_argument(
-        "--use_human_reference",
-        action="store_true",
-        help="If given, we will embed human response into the prompt."
-    )
-    # human agreement rate arguments
 
     args = parser.parse_args()
     

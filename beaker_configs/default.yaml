@@ -1,0 +1,35 @@
+version: v2
+description: placeholder
+budget: paceholder
+tasks:
+  - name: open-instruct-eval-default
+    image:
+      beaker: placeholder
+    command: [
+      '/bin/sh', '-c'
+    ]
+    arguments: ['placeholder
+    ']
+    envVars:
+      - name: CUDA_DEVICE_ORDER
+        value: PCI_BUS_ID
+      - name: TRANSFORMERS_CACHE
+        value: ./cache/
+      - name: WANDB_PROJECT
+        value: open-instruct
+      - name: WANDB_WATCH
+        value: false
+      - name: WANDB_LOG_MODEL
+        value: false
+      - name: WANDB_DISABLED
+        value: true
+    result:
+      # Beaker will capture anything that's written to this location and store it in the results
+      # dataset.
+      path: /output
+    resources:
+      gpuCount: 0
+    constraints:
+      cluster: ai2/allennlp-cirrascale
+    context:
+      priority: low

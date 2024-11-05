@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_DICT
+from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
 import NAMME.evaluate.basic_annotators as annotator_funcs
 
 def evaluate(args):
@@ -57,27 +57,32 @@ def evaluate(args):
             })
 
     # specify the annotator for each category
-    if args.annotator in ANNOTATOR_DICT: # using different annotators for different category
+    if args.annotator in ANNOTATOR_GROUP_DICT: # using different annotators for different category
         for category in args.nr_category:
-            assert category in ANNOTATOR_DICT[args.annotator], \
+            assert category in ANNOTATOR_GROUP_DICT[args.annotator], \
             f"Category {category} does not have an assigned annotator by {args.annotator}."
-        category_to_annotator = ANNOTATOR_DICT[args.annotator]
-    else:
-        category_to_annotator = {category: args.annotator for category in args.nr_category}
+        category_to_annotator = ANNOTATOR_GROUP_DICT[args.annotator]
+    else: # one single annotator for all categories
+        category_to_annotator = {category: {
+                                    'annotator': args.annotator, 
+                                    'use_human_ref': args.use_human_reference} 
+                                for category in args.nr_category}
 
     # running evaluation through AlpacaEval
     results = {}
     for category in args.nr_category:
+        annotator = category_to_annotator[category]['annotator']
+        use_human_reference = category_to_annotator[category]['use_human_ref']
+
         category_model_responses = model_responses[category]
         category_baseline_responses = baseline_responses[category]
-        if args.use_human_reference:
+        if use_human_reference:
             category_human_references = human_references[category]
         else:
             category_human_references = None
         logging.info(f"Running evaluation on category: {category}")
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
-        annotator = category_to_annotator[category]
 
         if annotator in DEFINED_ANNOTATORS: # non-llm annotators
             # run the according evaluation function
@@ -87,7 +92,7 @@ def evaluate(args):
             json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
         else: # llm annotators
             cache_dir = os.path.join(args.cache_dir, model_name, category.lower().replace(" ", "_"))
-            os.makedirs(cache_dir)
+            os.makedirs(cache_dir, exist_ok=True)
             alpaca_farm_evaluate(
                 model_outputs=category_model_responses,
                 reference_outputs=category_baseline_responses,
@@ -100,7 +105,7 @@ def evaluate(args):
                 is_cache_leaderboard=False,
                 base_dir=args.config_dir,
                 seed=args.seed,
-                output_keys=("output_1", "output_2", "output_human") if args.use_human_reference else ("output_1", "output_2")
+                output_keys=("output_1", "output_2", "output_human") if use_human_reference else ("output_1", "output_2")
             )
             cur_annotations = json.load(open(os.path.join(output_path, annotator, "annotations.json"), 'r'))
         

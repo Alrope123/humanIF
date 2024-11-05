@@ -1,19 +1,98 @@
 from collections import defaultdict
 
-ANNOTATOR_DICT = {
+ANNOTATOR_GROUP_DICT = {
     "NAMME": {
-        "Brainstorm": "llama3.1-70b_basic_no_reference",  
-        "Open QA": "bertscore",
-        "Closed QA": "bertscore", 
-        "Extract": "llama3.1-70b_basic_w_reference", 
-        "Generation": "llama3.1-70b_basic_w_reference", 
-        "Rewrite": "llama3.1-70b_basic_w_reference", 
-        "Summarize": "llama3.1-70b_basic_no_reference",
-        "Classify": "llama3.1-70b_basic_w_reference", 
-        "Fact Checking or Attributed QA": "bertscore", 
-        "Multi-Document Synthesis": "llama3.1-70b_basic_w_reference", 
-        "Reasoning Over Numerical Data": "llama3.1-70b_basic_w_reference"
-    }
+        "Brainstorm": {
+            "annotator": "llama3.1-70b_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Open QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Closed QA": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Extract": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Generation": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Rewrite": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Summarize": {
+            "annotator": "llama3.1-70b_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Classify": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Fact Checking or Attributed QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Multi-Document Synthesis": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Reasoning Over Numerical Data": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+    },
+    "NAMME_7b": {
+        "Brainstorm": {
+            "annotator": "llama3.1_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Open QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Closed QA": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Extract": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Generation": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Rewrite": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Summarize": {
+            "annotator": "llama3.1_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Classify": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Fact Checking or Attributed QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Multi-Document Synthesis": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Reasoning Over Numerical Data": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+    },
 }
 
 DEFINED_ANNOTATORS = ["short", "long", "random", "bertscore", "rouge-1"]
