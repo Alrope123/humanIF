@@ -31,7 +31,7 @@ def main(args):
     do_sampling = args.do_sampling
     
     # load config template
-    root_directory = os.path.join("HREF", "LLM-as-a-Judge")
+    root_directory = os.path.join("href", "LLM-as-a-Judge")
     with open(os.path.join(root_directory, "config_template.yaml"), 'r') as f:
         config = yaml.safe_load(f)
     # load config setting
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="HREF/LLM-as-a-Judge/configs",
+        default="href/LLM-as-a-Judge/configs",
     )
 
     parser.add_argument(

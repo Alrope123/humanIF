@@ -9,20 +9,31 @@ import datasets
 import vllm
 from openai import OpenAI
 
-from HREF.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
+from href.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
 
 
 def generate(args):
-    # model_name_or_path and openai_engine cannot be both None or both not None.
+    # model_name_or_path and openai_engine cannot be both None or both not None
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
+
+    # we skip everything if all outputs have been generate
+    need_to_load_model = False
+    for category in args.nr_category():
+        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine) + f"-t={args.temperature}" 
+        save_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"), "responses.jsonl")
+        need_to_load_model = need_to_load_model or not os.path.exists(save_path)
+    if not need_to_load_model:
+        logging.info("Found all saved generations, reusing the generations.")
+        return
 
     # load chat formatting
     chat_formatting_function = dynamic_import_function(args.chat_formatting_function) if args.use_chat_format else None
 
-    # load HREF from huggingface
+    # load href from huggingface
     raw_text_prompts = defaultdict(list)  # category -> list of example dicts
-    HREF_data = datasets.load_dataset(args.dataset)[args.split]
-    for example in HREF_data:
+    href_data = datasets.load_dataset(args.dataset)[args.split]
+    for example in href_data:
         category = example['category']
         if args.nr_category and category not in args.nr_category:
             continue
@@ -87,6 +98,17 @@ def generate(args):
     for category, category_prompts in prompts.items():
         assert category in args.nr_category
 
+        # config saving path
+        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine) + f"-t={args.temperature}" 
+        save_dir = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
+        save_path = os.path.join(save_dir, "responses.jsonl")
+        if os.path.exists(save_path):
+            logging.info(f"Found saved generations for {category}, reusing the generations.")
+            continue
+        else:
+            os.makedirs(save_dir, exist_ok=True)
+
         logging.info(f"Running inference on category: {category}")
         if args.model_name_or_path is not None: # local model
             if args.use_vllm:
@@ -115,24 +137,19 @@ def generate(args):
                 )
                 category_outputs.append(response.choices[0].message.content)
                 
-
         # save the outputs
-        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) + f"-t={args.temperature}" 
-        save_dir = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
-        os.makedirs(save_dir, exist_ok=True)
-        with open(os.path.join(save_dir, f"responses.jsonl"), "w") as fout:
+        with open(save_path, "w") as fout:
             for prompt, output in zip(raw_text_prompts[category], category_outputs):
                 example = {
                     "instruction": prompt,
                     "output": output,
                     "generator": f"{model_name}-t={args.temperature}",
-                    "dataset": f"HREF_{category}"
+                    "dataset": f"href_{category}"
                 }
                 fout.write(json.dumps(example) + "\n")
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "--dataset",
@@ -243,3 +260,6 @@ if __name__ == "__main__":
     os.environ['HF_HOME'] = args.cache_dir
 
     generate(args)
+
+if __name__ == "__main__":
+    main()

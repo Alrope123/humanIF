@@ -122,7 +122,7 @@ RUN pip install --upgrade pip setuptools==69.5.1 wheel
 RUN pip install -r requirements.txt
 # Use v1 of alpaca eval.
 ENV IS_ALPACA_EVAL_2=False
-COPY HREF HREF
+COPY href href
 COPY results results
 COPY setup.py .
 RUN pip install -e .
