@@ -9,12 +9,14 @@ import datasets
 import vllm
 from openai import OpenAI
 
-from href.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
+from href.generation.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
 
 
 def generate(args):
     # model_name_or_path and openai_engine cannot be both None or both not None
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
+    if args.tokenizer_name_or_path is None:
+        args.tokenizer_name_or_path = args.model_name_or_path
 
     # we skip everything if all outputs have been generate
     need_to_load_model = False

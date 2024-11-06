@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
+from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
 from collections import Counter
 
 

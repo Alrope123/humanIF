@@ -6,8 +6,8 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
-import href.evaluate.basic_annotators as annotator_funcs
+from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
+import href.evaluation.basic_annotators as annotator_funcs
 
 def evaluate(args):
     assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
@@ -17,7 +17,7 @@ def evaluate(args):
 
     # generate the model response if haven't
     if args.response_dir is None:
-        from href.generate.generate import generate
+        from href.generation.generate import generate
         generate(args)
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
             else args.openai_engine) + f"-t={args.temperature}"
@@ -154,7 +154,7 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="HuggingFaceH4/no_robots",
+        default="alrope/dev_test",
         help="Path to the reference outputs. If none is provided, will use human-written references."
     )
     parser.add_argument(
@@ -167,7 +167,7 @@ def main():
         "--nr_category",
         type=str,
         default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
-                 "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
+                 "Classify", "Closed QA", "Extract"],
         nargs="+",
         help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
     )
@@ -234,8 +234,8 @@ def main():
     parser.add_argument(
         "--chat_formatting_function", 
         type=str, 
-        default="generate.templates.create_prompt_with_huggingface_tokenizer_template", 
-        help="The function to use to create the chat format. This function will be dynamically imported. Please see examples in `eval/templates.py`."
+        default="generation.templates.create_prompt_with_huggingface_tokenizer_template", 
+        help="The function to use to create the chat format. This function will be dynamically imported. Please see examples in `generation/templates.py`."
     )
     parser.add_argument(
         "--seed",

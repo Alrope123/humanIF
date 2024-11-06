@@ -6,7 +6,7 @@ import asyncio
 import os
 from importlib import import_module
 from transformers import StoppingCriteria, pipeline
-from href.generate.dispatch_openai_requests import dispatch_openai_chat_requesets, dispatch_openai_prompt_requesets
+from href.generation.dispatch_openai_requests import dispatch_openai_chat_requesets, dispatch_openai_prompt_requesets
 import warnings
 
 

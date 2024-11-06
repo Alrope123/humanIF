@@ -19,7 +19,7 @@ setup(
     python_requires='==3.10',
     entry_points={
         "console_scripts": [
-            "evaluate=href.evaluate:evaluate.main",
+            "evaluate=href.evaluation:evaluate.main",
         ],
     }
 )

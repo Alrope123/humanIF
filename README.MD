@@ -23,9 +23,9 @@ pip install -e .
 ```
 
 ## Evaluate on the validation set locally
-To evaluate a model on the validation set of HREF, 
+To evaluate a open model on the validation set of HREF, 
 ```bash
-href evaluate --annotator "llama-7B"
+href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 ```
 
 This command does the following.
