@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
+from HREF.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
 from collections import Counter
 
 
@@ -71,9 +71,9 @@ def evaluate(args):
     assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
 
     # load model responses
-    NAMME_data = datasets.load_dataset(args.dataset)[args.split]
+    HREF_data = datasets.load_dataset(args.dataset)[args.split]
     data = defaultdict(list)
-    for example in NAMME_data:
+    for example in HREF_data:
         category = example['category']
         if args.nr_category and category not in args.nr_category:
             continue
@@ -100,20 +100,20 @@ def evaluate(args):
             "instruction": dp['instruction'],
             "output": dp['output_a'],
             "generator": dp['generator_a'],
-            "dataset": f"NAMME_{category}"
+            "dataset": f"HREF_{category}"
         } for dp in data[category]]
         category_responses_b = [{
             "instruction": dp['instruction'],
             "output": dp['output_b'],
             "generator": dp['generator_b'],
-            "dataset": f"NAMME_{category}"
+            "dataset": f"HREF_{category}"
         } for dp in data[category]]
         if use_human_reference:
             category_human_references = [{
                 "instruction": dp['instruction'],
                 "output": dp['reference'],
                 "generator": "human",
-                "dataset": f"NAMME_{category}"
+                "dataset": f"HREF_{category}"
             } for dp in data[category]]
         else:
             category_human_references = None
@@ -180,7 +180,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="NAMME/LLM-as-a-Judge/configs",
+        default="HREF/LLM-as-a-Judge/configs",
         help="If specified, we will use the dir as the root directory for annotator configuration.",
     )
     parser.add_argument(

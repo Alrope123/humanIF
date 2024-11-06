@@ -6,8 +6,8 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from NAMME.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
-import NAMME.evaluate.basic_annotators as annotator_funcs
+from HREF.evaluate.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
+import HREF.evaluate.basic_annotators as annotator_funcs
 
 def evaluate(args):
     assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
@@ -17,7 +17,7 @@ def evaluate(args):
 
     # generate the model response if haven't
     if args.response_dir is None:
-        from NAMME.generate.generate import generate
+        from HREF.generate.generate import generate
         generate(args)
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
             else args.openai_engine) + f"-t={args.temperature}"
@@ -34,11 +34,11 @@ def evaluate(args):
             model_responses[category].extend([json.loads(line) for line in fin])
 
     # load baseline model response and/or human response
-    NAMME_data = datasets.load_dataset(args.dataset)[args.split]
+    HREF_data = datasets.load_dataset(args.dataset)[args.split]
     baseline_responses = defaultdict(list)
     if args.use_human_reference:
         human_references = defaultdict(list)  # category -> list of example dicts
-    for example in NAMME_data:
+    for example in HREF_data:
         category = example['category']
         if args.nr_category and category not in args.nr_category:
             continue
@@ -46,14 +46,14 @@ def evaluate(args):
             "instruction": example['instruction'],
             "output": example['output'],
             "generator": "Meta-Llama-3.1-70B-Instruct",
-            "dataset": f"NAMME_{category}"
+            "dataset": f"HREF_{category}"
         })
         if args.use_human_reference:
             human_references[category].append({
                 "instruction": example['instruction'],
                 "output": example['reference'],
                 "generator": "human",
-                "dataset": f"NAMME_{category}"
+                "dataset": f"HREF_{category}"
             })
 
     # specify the annotator for each category
@@ -137,7 +137,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="NAMME/LLM-as-a-Judge/configs",
+        default="HREF/LLM-as-a-Judge/configs",
         help="If specified, we will use the dir as the root directory for annotator configuration.",
     )
     parser.add_argument(

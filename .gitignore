@@ -1,4 +1,6 @@
 data
 results
+results_dev
 **/__pycache__/
-NAMME.egg-info
+HREF.egg-info
+beaker_configs/auto_created

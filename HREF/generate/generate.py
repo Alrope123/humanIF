@@ -9,7 +9,7 @@ import datasets
 import vllm
 from openai import OpenAI
 
-from NAMME.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
+from HREF.generate.utils import generate_completions, dynamic_import_function, load_hf_lm, load_hf_tokenizer
 
 
 def generate(args):
@@ -19,10 +19,10 @@ def generate(args):
     # load chat formatting
     chat_formatting_function = dynamic_import_function(args.chat_formatting_function) if args.use_chat_format else None
 
-    # load NAMME from huggingface
+    # load HREF from huggingface
     raw_text_prompts = defaultdict(list)  # category -> list of example dicts
-    NAMME_data = datasets.load_dataset(args.dataset)[args.split]
-    for example in NAMME_data:
+    HREF_data = datasets.load_dataset(args.dataset)[args.split]
+    for example in HREF_data:
         category = example['category']
         if args.nr_category and category not in args.nr_category:
             continue
@@ -127,7 +127,7 @@ def generate(args):
                     "instruction": prompt,
                     "output": output,
                     "generator": f"{model_name}-t={args.temperature}",
-                    "dataset": f"NAMME_{category}"
+                    "dataset": f"HREF_{category}"
                 }
                 fout.write(json.dumps(example) + "\n")
 
