@@ -6,7 +6,7 @@
  
 
 ### Announcement
-* **11/07/2024**: We officially publish the paper [FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation](https://arxiv.org/abs/2305.14251), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 
+* **11/07/2024**: We officially publish the paper [HREF paper](), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 
 
 ### Citation
 ```
