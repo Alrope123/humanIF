@@ -132,7 +132,7 @@ Please follow the logic how we implement OpenAI API in `href/generation/generate
 ## Human Agreement Analysis
 To calculate the human agreement rate of an evaluation method on HREF human agreement set, run:
 ```bash
-href calculate_agreement --annotator meta-llama/Llama-3.1-8B-Instruct
+href calculate_agreement --annotator llama3.1-70b_basic_w_reference --use_human_reference
 ```
 <details>
 <summary> General arguments </summary>
@@ -157,11 +157,11 @@ href calculate_agreement --annotator meta-llama/Llama-3.1-8B-Instruct
 ## Add a New Evaluator
 For this section, we give instructions on how to add a new evaluator `<new_evaluator>` that can be passed as the argument following `--annotator` for all commands. 
 
-### Add a non-LLM-based evaluator
+### Non-LLM-based evaluator
 1. Create a function for your evaluator in `href/evaluation/evaluators.py`.
 2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 
-### Add a LLM-based evaluator
+### LLM-based evaluator
 To use LLM-as-a-Judge, we use a external package: a [modified version](https://github.com/tatsu-lab/alpaca_eval) of [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval). To create a new LLM-as-a-judge evaluator, we modify the configuration with the following steps:
 
 #### 1. Create a new prompt template (Optional)
@@ -193,3 +193,8 @@ href create_config --model llama-70b --template_name basic_no_reference
 - `--no_exmple`: if specified, remove the demonstration examples in the prompt.
 - `--temperature`: the temperature for the judge model.
 </details>
+
+This will create a configuration directory with the name `<new_evaluator>_<new_template_name>` under `href/llm-as-a-judge/configs` than can be passed as the argument following `--annotator`.
+
+### Evaluator suite
+To create a evaluator suite where different unit evaluators are used for different categories, append to `href/evaluation/evaluators.py/ANNOTATOR_SUITE_DICT` where you specify the unit annotator with `annotator` and whether each annotator uses human reference with `use_human_reference` for each category.
