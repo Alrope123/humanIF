@@ -5,13 +5,13 @@
 [📑 Paper]() | [🤗 Leaderboard]() | [🤗 Validation Set]() | [🤗 Human Agreement Set]()
  
 
-If you find FActScore useful, please cite:
-```
-
-```
-
 ### Announcement
 * **11/07/2024**: We officially publish the paper [FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation](https://arxiv.org/abs/2305.14251), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 
+
+### Citation
+```
+
+```
 
 ## Install
 Make a new Python 3.10 environment and install the `href` package.
@@ -126,7 +126,7 @@ where each data point in responses.jsonl contains the fields: `instruction`, `ou
 3. Pass the save directory like `--response_dir <your save directory>`. Note that you should still pass a custom name for the model with `--model_name_or_path`.
 
 #### 3. Add more API models
-
+Please follow the logic how we implement OpenAI API in `href/generation/generate.py` to add your own API model, which is relatively straightforward.
 
 
 ## Human Agreement Analysis
@@ -162,3 +162,34 @@ For this section, we give instructions on how to add a new evaluator `<new_evalu
 2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 
 #### Add a LLM-based evaluator
+To use LLM-as-a-Judge, we use a external package: a [modified version](https://github.com/tatsu-lab/alpaca_eval) of [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval). To create a new LLM-as-a-judge evaluator, we modify the configuration with the following steps:
+
+##### 1. Create a new prompt template (Optional)
+* Create a new prompt template under `href/llm-as-a-judge/prompt_templates`. 
+* Note that besides the text, there are many placeholders of models' special tokens for different models to fit in, do not change their names. 
+* Refer to the existing template to write new templates.
+
+##### 2. Create a new model configuration
+* Add the configuration for `<new_evaluator>` in `href/llm-as-a-judge/model_settings.json`. 
+* The dictionary `template_kwargs` contains keys that corresponds to the placeholders in the prompt templates, please fill the values with the corresponding special token of your model.
+* `fn_completions` and `completions_kwargs` are the configurations for the judge models. You can probably refer to the existing configurations for most of the desired setting. Please refer to [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval) for more advanced settings.
+
+##### 3. Create the configuration file 
+To create the configuration file using the configurations from the previous two steps, run:
+```bash
+href create_config --model llama-70b --template_name basic_no_reference 
+```
+<details>
+<summary> Required Arguments </summary>
+
+- `--model_config_name`: the name of the model configuration used as the judge defined in `href/llm-as-a-judge/model_settings.json`.
+- `--template_name`: the name of the template file in `href/llm-as-a-judge/prompt_templates` (without the suffix).
+</details>
+
+<details>
+<summary> Optional Arguments </summary>
+
+- `--config_dir`: the directory to save the resulting configuration.
+- `--no_exmple`: if specified, remove the demonstration examples in the prompt.
+- `--temperature`: the temperature for the judge model.
+</details>

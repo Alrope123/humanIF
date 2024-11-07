@@ -21,14 +21,15 @@ def remove_substring_between(original_string, start_substring, end_substring):
     return original_string
 
 
-def main(args):
+def create_config(args):
     random.seed(42)
 
     model = args.model
     template_name = args.template_name
     config_dir = args.config_dir
     no_example = args.no_example
-    do_sampling = args.do_sampling
+    temperature = args.temperature
+    do_sampling = temperature > 0.0
     
     # load config template
     root_directory = os.path.join("href", "LLM-as-a-Judge")
@@ -48,18 +49,19 @@ def main(args):
     
     # change the default setting from the config template using the config setting file
     for k, v in model_configs.items():
-        if type(v) == str:
-            template = template.replace("{" + k + "}", v) 
-        if k in ["fn_completions", "completions_kwargs"]:
+        if k == "template_kwargs":
+            for place_holder, text in v.items():
+                template = template.replace("{" + place_holder + "}", text) 
+        else:
             config[template_name][k] = v
     
     # do sampling while judging
-    if do_sampling:
-        if model not in ["gpt4", "gpt4-turbo"]:
-            config[template_name]["completions_kwargs"]["do_sample"] = True
-            config[template_name]["completions_kwargs"]["temperature"] = 0.9
-        else:
-            config[template_name]["completions_kwargs"]["temperature"] = 0.9
+    if do_sampling and model not in ["gpt4", "gpt4-turbo"]:
+        config[template_name]["completions_kwargs"]["do_sample"] = True
+    elif not do_sampling and model not in ["gpt4", "gpt4-turbo"]:
+        config[template_name]["completions_kwargs"]["do_sample"] = False
+    config[template_name]["completions_kwargs"]["temperature"] = temperature
+
 
     # whether to exclude demonstrations
     if no_example:
@@ -75,39 +77,48 @@ def main(args):
     with open(os.path.join(config_dir, template_name, "configs.yaml"), 'w') as f:
         yaml.safe_dump(config, f, default_flow_style=False)
 
-if __name__ == "__main__":
+
+def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--model",
+        "--model_config_name",
         type=str,
-        default="gpt4",
+        required=True,
+        help="The name of the model configuration used as the judge defined in href/llm-as-a-judge/model_settings.json."
     )
 
     parser.add_argument(
         "--template_name",
         type=str,
-        required=True
+        required=True,
+        help="The name of the template file in `href/llm-as-a-judge/prompt_templates` (without the suffix)."
     )
 
     parser.add_argument(
         "--config_dir",
         type=str,
         default="href/LLM-as-a-Judge/configs",
+        help="the directory to save the resulting configuration."
     )
 
     parser.add_argument(
         "--no_example",
         default=False,
         action="store_true",
+        help="If specified, remove the demonstration examples in the prompt."
     )
 
     parser.add_argument(
-        "--do_sampling",
-        default=False,
-        action="store_true",
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="The temperature for the judge model."
     )
 
-
     args = parser.parse_args()
-    main(args)
+    create_config(args)
+
+
+if __name__ == "__main__":
+    main()

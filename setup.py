@@ -20,7 +20,8 @@ setup(
     entry_points={
         "console_scripts": [
             "evaluate=href.evaluation:evaluate.main",
-            "calculate_agreement=href.evaluation.calculate_human_agreement_rate.main"
+            "calculate_agreement=href.evaluation.calculate_human_agreement_rate.main",
+            "create_config=href.llm-as-a-judge.create_config.main",
         ],
     }
 )

@@ -1,14 +1,16 @@
 {
     "gpt4": {
-        "normal_message_start": "<|im_start|>",
-        "response_message_start": "\n<|im_start|>assistant",
-        "model_message_end": "\n<|im_end|>\n",
-        "user_message_end": "\n<|im_end|>",
-        "system_identifier": "system",
-        "user_identifier": "user",
-        "assistant_identifier": "assistant",
-        "beginning": "",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "<|im_start|>",
+            "response_message_start": "\n<|im_start|>assistant",
+            "model_message_end": "\n<|im_end|>\n",
+            "user_message_end": "\n<|im_end|>",
+            "system_identifier": "system",
+            "user_identifier": "user",
+            "assistant_identifier": "assistant",
+            "beginning": "",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "openai_completions",
         "completions_kwargs": {
             "model_name": "gpt-4",
@@ -17,15 +19,17 @@
         }
     },
     "gpt4-turbo": {
-        "normal_message_start": "<|im_start|>",
-        "response_message_start": "\n<|im_start|>assistant",
-        "model_message_end": "\n<|im_end|>\n",
-        "user_message_end": "\n<|im_end|>",
-        "system_identifier": "system",
-        "user_identifier": "user",
-        "assistant_identifier": "assistant",
-        "beginning": "",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "<|im_start|>",
+            "response_message_start": "\n<|im_start|>assistant",
+            "model_message_end": "\n<|im_end|>\n",
+            "user_message_end": "\n<|im_end|>",
+            "system_identifier": "system",
+            "user_identifier": "user",
+            "assistant_identifier": "assistant",
+            "beginning": "",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "openai_completions",
         "completions_kwargs": {
             "model_name": "gpt-4-turbo",
@@ -34,15 +38,17 @@
         }
     },
     "llama3": {
-        "normal_message_start": "",
-        "response_message_start": "",
-        "model_message_end": "<|eot_id|>",
-        "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        "system_identifier": "<|start_header_id|>system<|end_header_id|>",
-        "user_identifier": "<|start_header_id|>user<|end_header_id|>",
-        "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
-        "beginning": "<|begin_of_text|>",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "",
+            "response_message_start": "",
+            "model_message_end": "<|eot_id|>",
+            "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+            "system_identifier": "<|start_header_id|>system<|end_header_id|>",
+            "user_identifier": "<|start_header_id|>user<|end_header_id|>",
+            "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
+            "beginning": "<|begin_of_text|>",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "huggingface_local_completions",
         "completions_kwargs": {
             "model_name": "meta-llama/Meta-Llama-3-8B-Instruct",
@@ -54,15 +60,17 @@
         }
     },
     "llama3-70b": {
-        "normal_message_start": "",
-        "response_message_start": "",
-        "model_message_end": "<|eot_id|>",
-        "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        "system_identifier": "<|start_header_id|>system<|end_header_id|>",
-        "user_identifier": "<|start_header_id|>user<|end_header_id|>",
-        "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
-        "beginning": "<|begin_of_text|>",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "",
+            "response_message_start": "",
+            "model_message_end": "<|eot_id|>",
+            "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+            "system_identifier": "<|start_header_id|>system<|end_header_id|>",
+            "user_identifier": "<|start_header_id|>user<|end_header_id|>",
+            "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
+            "beginning": "<|begin_of_text|>",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "huggingface_local_completions",
         "completions_kwargs": {
             "model_name": "meta-llama/Meta-Llama-3-70B-Instruct",
@@ -74,15 +82,17 @@
         }
     },
     "llama3.1": {
-        "normal_message_start": "",
-        "response_message_start": "",
-        "model_message_end": "<|eot_id|>",
-        "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        "system_identifier": "<|start_header_id|>system<|end_header_id|>",
-        "user_identifier": "<|start_header_id|>user<|end_header_id|>",
-        "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
-        "beginning": "<|begin_of_text|>",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "",
+            "response_message_start": "",
+            "model_message_end": "<|eot_id|>",
+            "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+            "system_identifier": "<|start_header_id|>system<|end_header_id|>",
+            "user_identifier": "<|start_header_id|>user<|end_header_id|>",
+            "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
+            "beginning": "<|begin_of_text|>",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "huggingface_local_completions",
         "completions_kwargs": {
             "model_name": "meta-llama/Meta-Llama-3.1-8B-Instruct",
@@ -94,15 +104,17 @@
         }
     },
     "llama3.1-70b": {
-        "normal_message_start": "",
-        "response_message_start": "",
-        "model_message_end": "<|eot_id|>",
-        "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        "system_identifier": "<|start_header_id|>system<|end_header_id|>",
-        "user_identifier": "<|start_header_id|>user<|end_header_id|>",
-        "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
-        "beginning": "<|begin_of_text|>",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "",
+            "response_message_start": "",
+            "model_message_end": "<|eot_id|>",
+            "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+            "system_identifier": "<|start_header_id|>system<|end_header_id|>",
+            "user_identifier": "<|start_header_id|>user<|end_header_id|>",
+            "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
+            "beginning": "<|begin_of_text|>",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "huggingface_local_completions",
         "completions_kwargs": {
             "model_name": "meta-llama/Meta-Llama-3.1-70B-Instruct",
@@ -114,15 +126,17 @@
         }
     },
     "llama3.1-405b": {
-        "normal_message_start": "",
-        "response_message_start": "",
-        "model_message_end": "<|eot_id|>",
-        "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
-        "system_identifier": "<|start_header_id|>system<|end_header_id|>",
-        "user_identifier": "<|start_header_id|>user<|end_header_id|>",
-        "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
-        "beginning": "<|begin_of_text|>",
-        "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions.",
+        "template_kwargs": {
+            "normal_message_start": "",
+            "response_message_start": "",
+            "model_message_end": "<|eot_id|>",
+            "user_message_end": "<|eot_id|><|start_header_id|>assistant<|end_header_id|>",
+            "system_identifier": "<|start_header_id|>system<|end_header_id|>",
+            "user_identifier": "<|start_header_id|>user<|end_header_id|>",
+            "assistant_identifier": "<|start_header_id|>assistant<|end_header_id|>",
+            "beginning": "<|begin_of_text|>",
+            "system_message": "You are a helpful assistant that helps us rate an AI model's responses to instructions."
+        },
         "fn_completions": "huggingface_local_completions",
         "completions_kwargs": {
             "model_name": "meta-llama/Meta-Llama-3-405B-Instruct",

@@ -87,7 +87,7 @@ def generate(args):
                 prompts[category] = formatted_prompts
         else:
             prompts = dict(raw_text_prompts)
-    else: # openai model
+    else: # load openai model
         openai_client = OpenAI()
         prompts = dict(raw_text_prompts)
 
@@ -127,7 +127,7 @@ def generate(args):
                     temperature=args.temperature,
                     batch_size=args.batch_size if args.batch_size else 1,
                 )
-        else:
+        else: # openai model generation
             assert not args.use_chat_format
             category_outputs = []
             for prompt in category_prompts:
