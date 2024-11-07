@@ -125,6 +125,22 @@ where each data point in responses.jsonl contains the fields: `instruction`, `ou
 
 3. Pass the save directory like `--response_dir <your save directory>`. Note that you should still pass a custom name for the model with `--model_name_or_path`.
 
+### Build the leaderboard
+To build the leaderboard using the evaluation results, run:
+```bash
+python scripts/build_leaderboard.py --models <model 1> <model 2> ... <model n>  --result_dir <path to directory that contains results>
+```
+<details>
+<summary> Arguments </summary>
+
+- `--models`: name of the models to build the leaderboard
+- `--annotator`: name of the evaluator that generated the annotation results.
+- `--nr_category`: categories in the HREF to include.
+- `--result_dir`: path to the dir that contains the annotation files. 
+- `--save_dir`: directory to save all results. 
+ 
+</details>
+
 #### 3. Add more API models
 Please follow the logic how we implement OpenAI API in `href/generation/generate.py` to add your own API model, which is relatively straightforward.
 

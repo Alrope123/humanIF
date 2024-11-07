@@ -9,6 +9,7 @@ from scipy import stats
 
 def get_pvalue_from_paired_t_test(annotation1, annotation2):
     ttest_result = stats.ttest_rel(annotation1, annotation2)
+    assert False, ttest_result.pvalue
     return ttest_result.pvalue
 
 
@@ -27,10 +28,8 @@ def main(args):
     # initialize csv file
     os.makedirs(save_dir, exist_ok=True)
     leaderboard_csv = csv.writer(open(os.path.join(save_dir, "leaderboard.csv"), "w+"))
-    distinguishability_csv = csv.writer(open(os.path.join(save_dir, "distinguishability.csv"), "w+"))
-    titles = ["Model"] + nr_category + ["Average"]
+    titles = ["Model"] + nr_category + ["Average"] + [f"{cat} Rank" for cat in nr_category] + ["Average Rank"]
     leaderboard_csv.writerow(titles)
-    distinguishability_csv.writerow(titles)
 
     # read annotations
     positive_rates = defaultdict(list)
@@ -40,42 +39,65 @@ def main(args):
             category_name = category.lower().replace(' ', '_')
             cur_annotations = json.load(open(os.path.join(result_dir, model, category_name, annotator, "annotations.json"), 'r'))
             cur_annotations = [cur_a['preference'] for cur_a in cur_annotations]
-            positive_annotations = [cur_a['preference'] in [2.0, 0.0] for cur_a in cur_annotations]
+            positive_annotations = [cur_a in [2.0, 0.0] for cur_a in cur_annotations]
             positive_rates[model].append(sum(positive_annotations) / len(positive_annotations))
             cur_annotations = [cur_a if cur_a is not None else -1 for cur_a in cur_annotations]
+            annotations[model].append(cur_annotations)
 
-        average_positive_rate = np.mean(positive_rates[model].values())
-        model_annotations = [a for cat_annotations in annotations[model].values() for a in cat_annotations]
+        average_positive_rate = np.mean(positive_rates[model])
+        model_annotations = [a for cat_annotations in annotations[model] for a in cat_annotations]
         positive_rates[model].append(average_positive_rate)
         annotations[model].append(model_annotations)
 
-    # sort data by average
-    sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
-    sorted_annotations = [[m] + annotations[m] for m in sorted_positive_rates]
+    # calculate ranking
+    rankings = defaultdict(list)
+    for cat_index, cat in enumerate((nr_category + ["Average"])):
+        # sort data by average
+        sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
+        sorted_annotations = [[m] + annotations[m] for m in sorted_positive_rates]
 
-    # decide distinguishibility
-    sorted_distinguishabilities = []
-    for i, annotations_lists in enumerate(sorted_annotations):
-        cur_distinguishabilities = []
-        for j, annotation_list in enumerate(annotations_lists):
-            if j == 0: # simply add the model identifier
-                cur_distinguishabilities.append(annotation_list)
-                continue
-            # decide if the model is distinguishable from other models
-            indistinguishable_models = []
-            for k in range(len(sorted_annotations)):
-                if i != k:
-                    other_annotation_list = sorted_annotations[k][j]
-                    if not decide_is_distinguishable(other_annotation_list, annotation_list):
-                        indistinguishable_models.append(sorted_annotations[k][0])
-            cur_distinguishabilities.append(",".join(indistinguishable_models))
-        sorted_distinguishabilities.append(cur_distinguishabilities)
+        # decide distinguishibility ranking
+        i = 0
+        added_model_set = set()
+        while i < len(sorted_annotations):
+            model_name = sorted_annotations[i][0]
+            cur_annotation_list = sorted_annotations[i][cat_index+1]
+            # decide if the following model is distinguishable from the current
+            print(f"before i={i}")
+            rankings[model_name].append(i+1)
+            if model_name not in added_model_set:
+                added_model_set.add(model_name)
+            else:
+                assert False, [cat_index, model_name, len(sorted_annotations), [m[0] for m in sorted_annotations], added_model_set]
+            newly_added = 0
+            for j in range(i + 1, len(sorted_annotations), 1):
+                next_model_name = sorted_annotations[j][0]
+                next_annotation_list = sorted_annotations[j][cat_index+1]
+                if not decide_is_distinguishable(cur_annotation_list, next_annotation_list):
+                    if next_model_name not in added_model_set:
+                        added_model_set.add(next_model_name)
+                        
+                    else:
+                        assert False, [cat_index, model_name, next_model_name, len(sorted_annotations), [m[0] for m in sorted_annotations]]
+                    print(f"\tj={j}")
+                    rankings[next_model_name].append(i+1)
+                    newly_added += 1
+                    # print(added_model_set)
+                else:
+                    break
+            # print(len(sorted_annotations))
+            i += 1 + newly_added
+            print(f"after i={i}")
+
+            # print(added_model_set)
+                        
+    # add rankings and sort by average finally
+    sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
+    sorted_results = [[m] + rates + rankings[m] for m, rates in sorted_positive_rates.items()]
 
     # write to the files
-    for m, rates in sorted_positive_rates.items():
-        leaderboard_csv.writerow([m] + rates)
-    for distinguishability_list in sorted_distinguishabilities:
-        distinguishability_csv.writerow(distinguishability_list)
+    for row in sorted_results:
+        leaderboard_csv.writerow(row)
 
 
 if __name__ == "__main__":
@@ -86,46 +108,39 @@ if __name__ == "__main__":
         type=str,
         default=None,
         nargs="+",
-        help="Path to the dir that contains the prediction file."
+        help="Name of the models to build the leaderboard."
+    )
+
+    parser.add_argument(
+        "--annotator",
+        type=str,
+        default='NAMME',
+        help="Name of the evaluator that generated the annotation results."
     )
 
     parser.add_argument(
         "--nr_category",
         type=str,
         nargs="+",
-        help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
+                 "Classify", "Closed QA", "Extract"],
+        nargs="+",
+        help="Categories in the HREF to include."
     )
     
     parser.add_argument(
         "--result_dir",
         type=str,
         default="results",
-        help="Path to the dir that contains the prediction file."
+        help="Path to the dir that contains the annotation files."
     )
 
     parser.add_argument(
         "--save_dir",
         type=str, 
-        default="results"
+        default="results",
+        help="Directory to save all results."
     )
-
-    parser.add_argument(
-        "--split",
-        type=str,
-        default=None,
-        required=True,
-        help="Path to the dir that contains the prediction file."
-    )
-
-
-
-    parser.add_argument(
-        "--annotator",
-        type=str,
-        default='llama3.1-70b_basic_w_reference',
-        help="Path to the dir that contains the prediction file."
-    )
-
 
     args = parser.parse_args()
     main(args)
