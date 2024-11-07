@@ -14,7 +14,7 @@ If you find FActScore useful, please cite:
 * **11/07/2024**: We officially publish the paper [FActScore: Fine-grained Atomic Evaluation of Factual Precision in Long Form Text Generation](https://arxiv.org/abs/2305.14251), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 
 
 ## Install
-Make a new Python 3.10 environment and install the **href** package.
+Make a new Python 3.10 environment and install the `href` package.
 
 ```bash
 conda create -n href python=3.10
@@ -22,12 +22,40 @@ conda activate href
 pip install -e .
 ```
 
-## Evaluate on the validation set locally
-To evaluate a open model on the validation set of HREF, 
+## Evaluation on the Validation Set
+To evaluate a open huggingface or local model, 
 ```bash
 href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 ```
+<details>
+<summary> General arguments </summary>
 
+- `--response_dir`: the directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation.
+- `--model_name_or_path`: the huggingface model name or the path to a local directory that contains the model to use for evaluation.
+- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Defaulted to use the validation set of HREF.
+- `--split`: the split to use in `dataset`.
+- `--nr_cateogry`: categories in the HREF to include. Defaulted to use all 8 categories.
+- `--save_dir`: directory to save all results.
+</details>
+
+<details>
+<summary> Evaluation arguments </summary>
+
+- `annotator`: name of the evaluator.
+- ``
+</details>
+
+<details>
+<summary> Generation arguments </summary>
+  
+- ``
+</details>
+
+To evaluate an OpenAI models on the validation set of HREF
+```bash
+OPENAI_API_KEY=<your OpenAI key>
+href evaluate --model_name_or_path gpt-4
+```
 This command does the following.
 1. Download the knowledge source and example data.
 2. Take the LLAMA 7B model and reconstruct Inst-LLAMA. This requires having access to HuggingFace weights of the LLAMA-7B model, which are added to the `--llama_7B_HF_path` flag. Follow [this guide](https://huggingface.co/docs/transformers/main/model_doc/llama) in order to obtain those weights. Skip the `--llama_7B_HF_path` if you would only like to use the ChatGPT version of FActScore.

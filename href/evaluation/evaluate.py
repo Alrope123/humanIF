@@ -10,7 +10,6 @@ from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP
 import href.evaluation.basic_annotators as annotator_funcs
 
 def evaluate(args):
-    assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
     model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
         else args.openai_engine) + f"-t={args.temperature}" 
@@ -34,7 +33,10 @@ def evaluate(args):
             model_responses[category].extend([json.loads(line) for line in fin])
 
     # load baseline model response and/or human response
-    href_data = datasets.load_dataset(args.dataset)[args.split]
+    if any([args.dataset.endswith(f".{suffix}") for suffix in ["csv, json, text"]]): # load from local file
+        href_data = datasets.load_dataset(args.dataset.split(".")[-1], data_files=args.dataset)[args.split]
+    else: # load from huggingface
+        href_data = datasets.load(args.dataset)[args.split]
     baseline_responses = defaultdict(list)
     if args.use_human_reference:
         human_references = defaultdict(list)  # category -> list of example dicts
@@ -127,12 +129,56 @@ def evaluate(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    # evaluation arguments
+    # general arguments
     parser.add_argument(
         "--response_dir",
         type=str, 
-        default="results/alpaca_farm",
-        help="If specified, we will load the model responses from the directory"
+        default=None,
+        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
+    )
+    parser.add_argument(
+        "--model_name_or_path",
+        type=str,
+        default=None,
+        help="The huggingface model name or the path to a local directory that contains the model to use for evaluation.",
+    )
+    parser.add_argument(
+        "--openai_engine",
+        type=str,
+        default=None,
+        help="If specified, we will use the OpenAI API to generate the predictions.",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="alrope/dev_test",
+        help="The huggingface dataset name or the path to a local file to use for evaluation."
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="train",
+        help="The split to use in dataset."
+    )
+    parser.add_argument(
+        "--nr_category",
+        type=str,
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
+                 "Classify", "Closed QA", "Extract"],
+        nargs="+",
+        help="Categories in the HREF to include."
+    )
+    parser.add_argument(
+        "--save_dir",
+        type=str, 
+        default="results",
+        help="Directory to save all results"
+    )
+    # evaluation arguments
+    parser.add_argument(
+        "--annotator",
+        type=str,
+        default="ahref",
     )
     parser.add_argument(
         "--config_dir",
@@ -141,53 +187,11 @@ def main():
         help="If specified, we will use the dir as the root directory for annotator configuration.",
     )
     parser.add_argument(
-        "--annotator",
-        type=str,
-        default="href",
-    )
-    parser.add_argument(
         "--use_human_reference",
         action="store_true",
         help="If given, we will embed human response into the prompt."
     )
     # generation arguments
-    parser.add_argument(
-        "--dataset",
-        type=str,
-        default="alrope/dev_test",
-        help="Path to the reference outputs. If none is provided, will use human-written references."
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        default="train",
-        help="The split of the dataset to use."
-    )
-    parser.add_argument(
-        "--nr_category",
-        type=str,
-        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
-                 "Classify", "Closed QA", "Extract"],
-        nargs="+",
-        help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
-    )
-    parser.add_argument(
-        "--save_dir",
-        type=str, 
-        default="results"
-    )
-    parser.add_argument(
-        "--model_name_or_path",
-        type=str,
-        default=None,
-        help="If specified, we will load the model to generate the predictions.",
-    )
-    parser.add_argument(
-        "--openai_engine",
-        type=str,
-        default="gpt-3.5-turbo",
-        help="If specified, we will use the OpenAI API to generate the predictions.",
-    )
     parser.add_argument(
         "--use_vllm",
         action="store_true",

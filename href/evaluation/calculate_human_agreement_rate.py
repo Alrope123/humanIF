@@ -188,7 +188,7 @@ def main():
         action="store_true",
         help="If given, we will embed human response into the prompt."
     )
-    # generation arguments
+    # general arguments
     parser.add_argument(
         "--dataset",
         type=str,
