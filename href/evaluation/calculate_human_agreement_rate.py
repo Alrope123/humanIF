@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
+from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
 from collections import Counter
 
 
@@ -80,11 +80,11 @@ def evaluate(args):
         data[category].append(example)
 
     # specify the annotator for each category
-    if args.annotator in ANNOTATOR_SUITE_DICT: # using different annotators for different category
+    if args.annotator in ANNOTATOR_GROUP_DICT: # using different annotators for different category
         for category in args.nr_category:
-            assert category in ANNOTATOR_SUITE_DICT[args.annotator], \
+            assert category in ANNOTATOR_GROUP_DICT[args.annotator], \
             f"Category {category} does not have an assigned annotator by {args.annotator}."
-        category_to_annotator = ANNOTATOR_SUITE_DICT[args.annotator]
+        category_to_annotator = ANNOTATOR_GROUP_DICT[args.annotator]
     else: # one single annotator for all categories
         category_to_annotator = {category: {
                                     'annotator': args.annotator, 
@@ -171,59 +171,62 @@ def evaluate(args):
     
 def main():
     parser = argparse.ArgumentParser()
-    # evaluation arguments
-    parser.add_argument(
-        "--annotator",
-        type=str,
-        default="basic_no_reference_gpt4",
-    )
-    parser.add_argument(
-        "--config_dir",
-        type=str,
-        default="href/LLM-as-a-Judge/configs",
-        help="If specified, we will use the dir as the root directory for annotator configuration.",
-    )
-    parser.add_argument(
-        "--use_human_reference",
-        action="store_true",
-        help="If given, we will embed human response into the prompt."
-    )
     # general arguments
     parser.add_argument(
         "--dataset",
         type=str,
-        default="HuggingFaceH4/no_robots",
-        help="Path to the reference outputs. If none is provided, will use human-written references."
+        default="alrope/human_agreement_test",
+        help="The huggingface dataset name or the path to a local file to use for evaluation."
     )
     parser.add_argument(
         "--split",
         type=str,
         default="train",
-        help="The split of the dataset to use."
+        help="The split to use in dataset."
     )
     parser.add_argument(
         "--nr_category",
         type=str,
-        default=["Generation", "Open QA", "Brainstorm", "Chat", "Rewrite", "Summarize",
-                 "Coding", "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
+                 "Classify", "Closed QA", "Extract"],
         nargs="+",
-        help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
-    )
-    parser.add_argument(
-        "--save_dir",
-        type=str, 
-        default="results"
+        help="Categories in the HREF to include."
     )
     parser.add_argument(
         "--seed",
         type=int,
-        default=42
+        default=42,
+        help="Random seed."
+    )
+    parser.add_argument(
+        "--save_dir",
+        type=str, 
+        default="results",
+        help="Directory to save all results"
     )
     parser.add_argument(
         "--cache_dir",
         type=str,
         default="cache",
-        help="The directory to store downloaded datasets and models.",
+        help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
+    )
+    # evaluation arguments
+    parser.add_argument(
+        "--annotator",
+        type=str,
+        default="ahref",
+        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in llm-as-a-judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
+    )
+    parser.add_argument(
+        "--config_dir",
+        type=str,
+        default="href/LLM-as-a-Judge/configs",
+        help="The directory to contain configures for LLM-as-a-Judge evaluators",
+    )
+    parser.add_argument(
+        "--use_human_reference",
+        action="store_true",
+        help="Whether of not annotator needs to use the human reference. No need to specify if annotator specifies a evaluator suite."
     )
 
     args = parser.parse_args()

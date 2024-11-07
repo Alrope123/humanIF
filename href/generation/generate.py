@@ -123,9 +123,9 @@ def generate(args):
                     tokenizer=tokenizer,
                     prompts=category_prompts,
                     max_new_tokens=args.max_new_tokens,
-                    do_sample=False,
+                    do_sample=False if args.temperature == 0.0 else True,
                     temperature=args.temperature,
-                    batch_size=args.eval_batch_size if args.eval_batch_size else 1,
+                    batch_size=args.batch_size if args.batch_size else 1,
                 )
         else:
             assert not args.use_chat_format
@@ -153,41 +153,69 @@ def generate(args):
 
 def main():
     parser = argparse.ArgumentParser()
+    # general arguments
     parser.add_argument(
-        "--dataset",
-        type=str,
-        default="HuggingFaceH4/no_robots",
-        help="Path to the reference outputs. If none is provided, will use human-written references."
-    )
-    parser.add_argument(
-        "--split",
-        type=str,
-        default="train",
-        help="The split of the dataset to use."
-    )
-    parser.add_argument(
-        "--nr_category",
-        type=str,
-        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize", "Classify", "Closed QA", "Extract", "Fact Checking or Attributed QA", "Multi-Document Synthesis", "Reasoning Over Numerical Data"],
-        nargs="+",
-        help="Categories in the No Robots dataset to include. If not specified, all categories will be used"
-    )
-    parser.add_argument(
-        "--save_dir",
+        "--response_dir",
         type=str, 
-        default="results"
+        default=None,
+        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
     )
     parser.add_argument(
         "--model_name_or_path",
         type=str,
         default=None,
-        help="If specified, we will load the model to generate the predictions.",
+        help="The huggingface model name or the path to a local directory that contains the model to use for evaluation.",
     )
     parser.add_argument(
         "--openai_engine",
         type=str,
-        default="gpt-3.5-turbo",
+        default=None,
         help="If specified, we will use the OpenAI API to generate the predictions.",
+    )
+    parser.add_argument(
+        "--dataset",
+        type=str,
+        default="alrope/dev_test",
+        help="The huggingface dataset name or the path to a local file to use for evaluation."
+    )
+    parser.add_argument(
+        "--split",
+        type=str,
+        default="train",
+        help="The split to use in dataset."
+    )
+    parser.add_argument(
+        "--nr_category",
+        type=str,
+        default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
+                 "Classify", "Closed QA", "Extract"],
+        nargs="+",
+        help="Categories in the HREF to include."
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed."
+    )
+    parser.add_argument(
+        "--save_dir",
+        type=str, 
+        default="results",
+        help="Directory to save all results"
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default="cache",
+        help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
+    )
+    # generation arguments
+    parser.add_argument(
+        "--response_dir",
+        type=str, 
+        default=None,
+        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
     )
     parser.add_argument(
         "--use_vllm",
@@ -198,7 +226,7 @@ def main():
         "--tokenizer_name_or_path",
         type=str,
         default=None,
-        help="If specified, we will load the tokenizer from here.",
+        help="The huggingface tokenizer name or the path to a local directory that contains the tokenizer to use for evaluation. If not specified, we will use the same ones as `model_name_or_path`.",
     )
     parser.add_argument(
         "--use_slow_tokenizer",
@@ -212,10 +240,16 @@ def main():
         help="Maximum number of new tokens to generate."
     )
     parser.add_argument(
-        "--eval_batch_size", 
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="The temperature we use for model generation.",
+    )
+    parser.add_argument(
+        "--batch_size", 
         type=int, 
         default=1, 
-        help="Batch size for evaluation."
+        help="Batch size for generation."
     )
     parser.add_argument(
         "--load_in_8bit",
@@ -235,25 +269,8 @@ def main():
     parser.add_argument(
         "--chat_formatting_function", 
         type=str, 
-        default="generate.templates.create_prompt_with_huggingface_tokenizer_template", 
-        help="The function to use to create the chat format. This function will be dynamically imported. Please see examples in `eval/templates.py`."
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="The temperature we use for model generation.",
-    )
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        default="cache",
-        help="The directory to store downloaded datasets and models.",
+        default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
+        help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
     )
     args = parser.parse_args()
 

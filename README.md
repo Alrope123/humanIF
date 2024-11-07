@@ -23,172 +23,142 @@ pip install -e .
 ```
 
 ## Evaluation on the Validation Set
-To evaluate a open huggingface or local model, 
+To evaluate a open huggingface or local model, run:
 ```bash
 href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 ```
 <details>
 <summary> General arguments </summary>
 
-- `--response_dir`: the directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation.
 - `--model_name_or_path`: the huggingface model name or the path to a local directory that contains the model to use for evaluation.
-- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Defaulted to use the validation set of HREF.
+- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Default to use the validation set of HREF.
 - `--split`: the split to use in `dataset`.
-- `--nr_cateogry`: categories in the HREF to include. Defaulted to use all 8 categories.
+- `--nr_cateogry`: categories in the HREF to include. Default to use all 8 categories.
+- `--seed`: random seed.
 - `--save_dir`: directory to save all results.
+- `--cache_dir`: the directory to store downloaded datasets, models, and intermmediate annotation files
 </details>
 
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/basic_annotators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`
-- ``
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
 <details>
 <summary> Generation arguments </summary>
-  
-- ``
+
+- `--response_dir`: the directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation.
+- `--use_vllm`: if given, we will use vLLM to generate the responses.
+- `--tokenizer_name_or_path`: the huggingface tokenizer name or the path to a local directory that contains the tokenizer to use for evaluation. If not specified, we will use the same ones as `model_name_or_path`.
+- `--use_slow_tokenizer`: if given, we will use the slow tokenizer.
+- `--max_new_tokens`: maximum number of new tokens to generate.
+- `--temperature`: the temperature we use for model generation. Default to be 0.0.
+- `--batch_size`: batch size for generation.
+- `--load_in_8bit`: load model in 8bit mode, which will reduce memory and speed up inference.
+- `--gptq`: if given, we're evaluating a 4-bit quantized GPTQ model.
+- `--use_chat_format`: if given, we will use the chat format for the prompts.
+- `--chat_formatting_function`: the name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in `generation/templates.py`. Default to use the chat template in the tokenizer.
 </details>
 
-To evaluate an OpenAI models on the validation set of HREF
+<br>
+
+To evaluate an OpenAI models, run:
 ```bash
 OPENAI_API_KEY=<your OpenAI key>
 href evaluate --model_name_or_path gpt-4
 ```
-This command does the following.
-1. Download the knowledge source and example data.
-2. Take the LLAMA 7B model and reconstruct Inst-LLAMA. This requires having access to HuggingFace weights of the LLAMA-7B model, which are added to the `--llama_7B_HF_path` flag. Follow [this guide](https://huggingface.co/docs/transformers/main/model_doc/llama) in order to obtain those weights. Skip the `--llama_7B_HF_path` if you would only like to use the ChatGPT version of FActScore.
+<details>
+<summary> General arguments </summary>
 
-**Optional flags**:
-- `--data_dir`: directory to store the knowledge source and example data. `.cache/factscore` by default.
-- `--model_dir`: directory to store Inst-LLAMA weights. `.cache/factscore` by default.
+- `--model_name_or_path`: the huggingface model name or the path to a local directory that contains the model to use for evaluation.
+- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Default to use the validation set of HREF.
+- `--split`: the split to use in `dataset`.
+- `--nr_cateogry`: categories in the HREF to include. Default to use all 8 categories.
+- `--seed`: random seed.
+- `--save_dir`: directory to save all results.
+- `--cache_dir`: the directory to store downloaded datasets, models, and intermmediate annotation files
+</details>
 
-**Troubleshooting**:
-- If you get a `ERROR 429: Too Many Requests` error while downloading the DB file, please download the DB from [this Google Drive link](https://drive.google.com/file/d/1mekls6OGOKLmt7gYtHs0WGf5oTamTNat/view?usp=sharing) and place it under `--data_dir` (`.cache/factscore` by default).
-- If everything else fails, consider downloading the files manually from [this link](https://drive.google.com/drive/folders/1bLHGu_imkZVtX6O0mpZ-G0-4ofTLM1ZA?usp=share_link) and placing them in `--data_dir` and `--model_dir`, see [`factscore/download_data.py`](factscore/download_data.py) for more details.
+<details>
+<summary> Evaluation arguments </summary>
+
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
+</details>
+
+<details>
+<summary> Generation arguments </summary>
+
+- `--response_dir`: the directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation.
+- `--max_new_tokens`: maximum number of new tokens to generate.
+- `--temperature`: the temperature we use for model generation. Default to be 0.0. 
+</details>
+
+### Evaluate your own model
+There are three ways to evaluate your own model/tokenizer on the validation set:
+
+#### 1. Adapt transformers interface
+1. Adapt your model/tokenizer to the [transfomers interface](https://huggingface.co/docs/transformers/index)
+2. Either upload your model/tokenizer on huggingface, or save them locally.
+3. Specify the `--model_name_or_path` argument with either the name of your uploaded model/tokenizer on huggingface, or the path to your local directory that contains saved model/tokenizer.
+4. If you would like to use a customized chat format on the instructions when generating the model response, add your own function in `href/generation/templates.py` and pass its path as an argument like `--chat_formatting_function href.generation.templates.your_function`.
+
+#### 2. Pre-generate responses
+1. Generate model responses to the `instruction` field of the data in your own way.
+2. Make sure to save responses in the following struction 
+```
+📂 <your save directory>
+ ┣ 📂 Brainstorm
+ ┃ ┗ 📜 responses.jsonl
+ ┣ 📂 Open QA
+ ┃ ┗ 📜 responses.jsonl
+ ┣ ...
+ ┃ ...
+ ┣ 📂 Multi-Document Sythesis
+ ┃ ┗ 📜 responses.jsonl
+```
+where each data point in responses.jsonl contains the fields: `instruction`, `output`, `generator`.
+
+3. Pass the save directory like `--response_dir <your save directory>`. Note that you should still pass a custom name for the model with `--model_name_or_path`.
+
+#### 3. Add more API models
 
 
-## Running FActScore using a command line
 
-We expect running FActScore costs about $1 of the API cost per 100 sentences. For instance, if you have 100 generations, each with 5 sentences on average, it costs $5 in total.
-
+## Human Agreement Analysis
+To calculate the human agreement rate of an evaluation method on HREF human agreement set, run:
 ```bash
-python -m factscore.factscorer --input_path {input_path} --model_name {estimator_name} --openai_key {openai_key}
+href calculate_agreement --annotator meta-llama/Llama-3.1-8B-Instruct
 ```
+<details>
+<summary> General arguments </summary>
 
-- `--input_path` can be something like `data/unlabeled/InstructGPT.jsonl`. It should be a `.jsonl` format where each line contains `topic` (a topic entity that corresponds to the Wikipedia title) and `output` (a generation from the model).
-- `--model_name`: `retrieval+ChatGPT` and `retrieval+llama+npm` (You can also use `retrieval+ChatGPT+npm` or `retrieval+llama` but we recommend the former two.)
-- `--openai_key`: File containing OpenAI API Key.
+- `--dataset`: the huggingface dataset name or the path to a local file to use for analysis. Default to use the human agreement set of HREF.
+- `--split`: the split to use in `dataset`.
+- `--nr_cateogry`: categories in the HREF to include. Default to use all 8 categories.
+- `--seed`: random seed.
+- `--save_dir`: directory to save all results.
+- `--cache_dir`: the directory to store downloaded datasets, models, and intermmediate annotation files
+</details>
 
-**Optional flags**:
-- `--data_dir`: Directory containing knowledge source, etc. `.cache/factscore` by default.
-- `--model_dir`: Directory containing Inst-LLAMA weights. Skip if your `model_name` doesn't include `llama`. `.cache/factscore` by default.
-- `--cache_dir`: Directory containing cache from API/models. `.cache/factscore` by default.
-- `--use_atomic_facts`: If specified, it uses model-generated atomic facts released as part of our data instead of running the atomic fact generator. This will allow reproducing our results with no (or little if it still uses ChatGPT) cost. You can't specify it if you are running new model generations.
-- `--gamma`: A hyperparameter for length penalty. `10` by default. It penalizes the score if the number of facts is less than `gamma`. `10` roughly corresponds to 2 sentences, so would penalize if the generation has less than 2 sentences. Usually, this would not change the ranking between systems unless some systems generate overly short responses all the time (e.g., models trained on NLP datasets without long-form generation tasks may do so). If you would like to turn off the length penalty completely, specify `--gamma 0`.
-- `--n_samples`: If specified, it runs the model on a subset of the data.
-- `--verbose`: If specified, it shows the progress bar.
-- `--print_rate_limit_error`: It specified, it prints out rate limit errors from OpenAI API.
-- `--cost_estimate`: This flag decides the type of OpenAI API cost estimation that we provide before calling it. It can be `"consider_cache"` (default) or `"ignore_cache"`.
-- `--abstain_detection`: This flag optionally enables automatic detection of abstained responses. By default this is disabled, but it is recommended to add your own function tailored to your model. The currently supported detectors are `"generic"` and `"perplexity_ai"`, and their implementations can be found in [`factscore/abstain_detection.py`](factscore/abstain_detection.py). There are two methods to add your own abstain function: a) clone our GitHub repository to install `factscore` locally (`pip install --editable .`), and then add your function to [`factscore/abstain_detection.py`](factscore/abstain_detection.py) directly; b) process your abstain detection outside our package, and use empty strings in the `output` key for the JSONL file used in `--input_path`.
-- `--knowledge_source`: In case the default knowledge source (Wikipedia - 2023/04/01) will not be used, preprocess it using the [instructions below](#To-use-a-custom-knowledge-source), and then specify the knowledge_source name under this flag.
+<details>
+<summary> Evaluation arguments </summary>
 
-## To evaluate your own LM
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
+</details>
 
-There're two sets of prompt entities, `data/labeled/prompt_entities.txt` (183 entities) and `data/unlabeled/prompt_entities.txt` (500 entities). Each line contains the name of the person (which is also a corresponding Wikipedia title). You can use the labeled version if you want to be compatible with the data under `data/labeled` (Section 3 and Section 4.2 in the paper), and use the unlabeled version if you want to be compatible with the data under `data/unlabeled` (Section 4.3 in the paper).
 
-You can prompt your LM with your own prompt (we used `Question: Tell me a bio of <entity>.`) and use the following code.
+### Add a new evaluator
+For this section, we give instructions on how to add a new evaluator `<new_evaluator>` that can be passed as the argument following `--annotator` for all commands. 
 
-```python
-from factscore.factscorer import FactScorer
+#### Add a non-LLM-based evaluator
+1. Create a function for your evaluator in `href/evaluation/evaluators.py`.
+2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 
-fs = FactScorer(openai_key="...")
-
-# topics: list of strings (human entities used to generate bios)
-# generations: list of strings (model generations)
-out = fs.get_score(topics, generations, gamma=10)
-print (out["score"]) # FActScore
-print (out["init_score"]) # FActScore w/o length penalty
-print (out["respond_ratio"]) # % of responding (not abstaining from answering)
-print (out["num_facts_per_response"]) # average number of atomic facts per response
-```
-
-Alternatively, you can create a .jsonl file, where each line has `topic` (entity name, exactly same as the one from `.txt` file) and `output` (generation from LM), and then use a command line [above](#Running-FActScore-using-a-command-line).
-
-We recommend using (A) `FactScorer(model_name="retrieval+ChatGPT")` (default) or (B) `FactScorer(model_name="retrieval+llama+npm")`. They have 0.99 Pearson correlation. Here're results of a range of models, which you can easily reproduce through [these command lines](#Running-FActScore-using-a-command-line).
-
-| Model | % respond | # facts | FActScore from (A) | FActScore from (B) |
-|---|---|---|---|---|
-| [GPT-4](https://arxiv.org/abs/2303.08774)                                         | 88.2 | 60.8 | 73.1 | 59.9 |
-| [ChatGPT](https://openai.com/blog/chatgpt)                                        | 84.2 | 37.0 | 71.6 | 60.4 |
-| [Alpaca 65B](https://crfm.stanford.edu/2023/03/13/alpaca.html)                    | 100.0 | 17.1 | 55.6 | 46.3 |
-| [InstructGPT](https://openai.com/research/instruction-following)                  | 99.8 | 27.7 | 52.8 | 41.7 |
-| [Alpaca 13B](https://crfm.stanford.edu/2023/03/13/alpaca.html)                    | 100.0 | 16.6 | 47.7 | 40.3 |
-| [Vicuna 13B](https://lmsys.org/blog/2023-03-30-vicuna/)                           | 76.6 | 50.9 | 46.6 | 40.7 |
-| [Alpaca 7B](https://crfm.stanford.edu/2023/03/13/alpaca.html)                     | 100.0 | 17.4 | 39.7 | 36.5 |
-| [Vicuna 7B](https://lmsys.org/blog/2023-03-30-vicuna/)                            | 91.0 | 45.6 | 38.9 | 36.9 |
-| [MPT Chat 7B](https://www.mosaicml.com/blog/mpt-7b)                               | 88.8 | 37.3 | 30.1 | 27.9 |
-| [Oasst Pythia 12B](https://huggingface.co/OpenAssistant/oasst-sft-1-pythia-12b)   | 100.0 | 39.7 | 25.1 | 20.8 |
-| [Dolly 12B](https://huggingface.co/databricks/dolly-v2-12b)                       | 100.0 | 24.6 | 21.7 | 17.1 |
-| [StableLM tuned 7B](https://huggingface.co/stabilityai/stablelm-tuned-alpha-7b)   | 66.6 | 38.0 | 17.3 | 16.3 |
-
-`% respond` (% of responding instead of abstaining from answering) and `# facts` (# of atomic facts per valid response) indicate "factual recall" (how many pieces of information the model gives) and FActScore indicates "factual precision" (how accurate each piece of information the model gives is).
-
-## To use a custom knowledge source
-
-By default, FActScore uses Wikipedia dump from 2023/04/01. But you can also use your own knowledge source!
-
-The knolwedge source should be ready in a `.jsonl` format, where each line is a dictionary containing `title` and `text`. `text` can either be a string or a list of strings (e.g., sections).
-
-```python
-from factscore.factscorer import FactScorer
-
-fs = FactScorer()
-
-# this will create a database using your file
-# for English Wikipedia (18GB)), it takes ~8 hours
-# once DB file is created, you can reuse it by only specifying `db_path`
-fs.register_knowledge_source(name_of_your_knowledge_source,
-                             data_path=path_to_jsonl_file,
-                             db_path=path_to_output_db_file)
-
-# now, when you compute a score, specify knowledge source to use
-out = fs.get_score(topics, generations, knowledge_source=name_of_your_knowledge_source)
-print (out["score"]) # FActScore
-print (out["respond_ratio"]) # % of responding (not abstaining from answering)
-print (out["num_facts_per_response"]) # average number of atomic facts per response
-```
-
-To see an example of constructing the ACL anthology knowledge source, see [`preprocessing/preprocess_acl.py`](preprocessing/preprocess_acl.py).
-
-## FActScore results of the unlabeled data
-
-You can easily reproduce FActScore results of 12 different LMs reported in Section 4.3 of [the paper](https://arxiv.org/abs/2305.14251) using this code. However, if you would like to obtain their predictions without running the code, you can download it from [this Google Drive link](https://drive.google.com/file/d/128qpNFhXJJTmPIbtqMJ5QSZprhWQDCDa/view?usp=sharing).
-
-Each file corresponds to the subject LM (LM that generates responses that we are validating). Each line is a dictionary:
-- `prompt`: the initial prompt fed into the LM
-- `facts`: atomic facts decomposed by the model
-- `LLAMA+NP_labels`: labels to facts, verified by LLAMA+NP
-- `ChatGPT_labels`: labels to facts, verified by ChatGPT
-
-Note that the number of lines may be less than 500, because it excludes the cases where the model abstains from responding (e.g., it says "I don't know"). You can do `# of lines / 500` to calculate the response ratio.
-
-If you unzip the data and run the following code for verification, you will be able to get statistics that exactly match the statistics reported in the paper (Table 5 and Figure 3).
-```python
-dirname = "factscore-unlabeled-predictions"
-for fn in os.listdir(dirname):
-    chatgpt_fs = []
-    llama_fs = []
-    n_facts = []
-    with open(os.path.join(dirname, fn)) as f:
-        for line in f:
-            dp = json.loads(line)
-            n_facts.append(len(dp["facts"]))
-            if "ChatGPT_Labels" in dp:
-                chatgpt_fs.append(np.mean([l=="S" for l in dp["ChatGPT_Labels"]]))
-            llama_fs.append(np.mean([l=="S" for l in dp["LLAMA+NP_Labels"]]))
-    print ("Model=%s\t(%.1f%% responding, %.1f facts/response)\tFactScore=%.1f (ChatGPT)\t%.1f (LLAMA)" % (
-        fn.split(".")[0], len(n_facts)*100/500, np.mean(n_facts), np.mean(chatgpt_fs)*100, np.mean(llama_fs)*100
-    ))
-```
+#### Add a LLM-based evaluator

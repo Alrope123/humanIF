@@ -20,6 +20,7 @@ setup(
     entry_points={
         "console_scripts": [
             "evaluate=href.evaluation:evaluate.main",
+            "calculate_agreement=href.evaluation.calculate_human_agreement_rate.main"
         ],
     }
 )

@@ -6,8 +6,8 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
-import href.evaluation.basic_annotators as annotator_funcs
+from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
+import href.evaluation.evaluators as annotator_funcs
 
 def evaluate(args):
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
@@ -169,29 +169,48 @@ def main():
         help="Categories in the HREF to include."
     )
     parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed."
+    )
+    parser.add_argument(
         "--save_dir",
         type=str, 
         default="results",
         help="Directory to save all results"
+    )
+    parser.add_argument(
+        "--cache_dir",
+        type=str,
+        default="cache",
+        help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
     )
     # evaluation arguments
     parser.add_argument(
         "--annotator",
         type=str,
         default="ahref",
+        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in llm-as-a-judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )
     parser.add_argument(
         "--config_dir",
         type=str,
         default="href/LLM-as-a-Judge/configs",
-        help="If specified, we will use the dir as the root directory for annotator configuration.",
+        help="The directory to contain configures for LLM-as-a-Judge evaluators",
     )
     parser.add_argument(
         "--use_human_reference",
         action="store_true",
-        help="If given, we will embed human response into the prompt."
+        help="Whether of not annotator needs to use the human reference. No need to specify if annotator specifies a evaluator suite."
     )
     # generation arguments
+    parser.add_argument(
+        "--response_dir",
+        type=str, 
+        default=None,
+        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
+    )
     parser.add_argument(
         "--use_vllm",
         action="store_true",
@@ -201,7 +220,7 @@ def main():
         "--tokenizer_name_or_path",
         type=str,
         default=None,
-        help="If specified, we will load the tokenizer from here.",
+        help="The huggingface tokenizer name or the path to a local directory that contains the tokenizer to use for evaluation. If not specified, we will use the same ones as `model_name_or_path`.",
     )
     parser.add_argument(
         "--use_slow_tokenizer",
@@ -215,10 +234,16 @@ def main():
         help="Maximum number of new tokens to generate."
     )
     parser.add_argument(
-        "--eval_batch_size", 
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="The temperature we use for model generation.",
+    )
+    parser.add_argument(
+        "--batch_size", 
         type=int, 
         default=1, 
-        help="Batch size for evaluation."
+        help="Batch size for generation."
     )
     parser.add_argument(
         "--load_in_8bit",
@@ -238,26 +263,10 @@ def main():
     parser.add_argument(
         "--chat_formatting_function", 
         type=str, 
-        default="generation.templates.create_prompt_with_huggingface_tokenizer_template", 
-        help="The function to use to create the chat format. This function will be dynamically imported. Please see examples in `generation/templates.py`."
+        default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
+        help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
     )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=42
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="The temperature we use for model generation.",
-    )
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        default="cache",
-        help="The directory to store downloaded datasets and models.",
-    )
+
     args = parser.parse_args()
     
     # set up
