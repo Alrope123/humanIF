@@ -9,7 +9,6 @@ from scipy import stats
 
 def get_pvalue_from_paired_t_test(annotation1, annotation2):
     ttest_result = stats.ttest_rel(annotation1, annotation2)
-    assert False, ttest_result.pvalue
     return ttest_result.pvalue
 
 
@@ -58,38 +57,21 @@ def main(args):
 
         # decide distinguishibility ranking
         i = 0
-        added_model_set = set()
         while i < len(sorted_annotations):
             model_name = sorted_annotations[i][0]
             cur_annotation_list = sorted_annotations[i][cat_index+1]
             # decide if the following model is distinguishable from the current
-            print(f"before i={i}")
             rankings[model_name].append(i+1)
-            if model_name not in added_model_set:
-                added_model_set.add(model_name)
-            else:
-                assert False, [cat_index, model_name, len(sorted_annotations), [m[0] for m in sorted_annotations], added_model_set]
             newly_added = 0
             for j in range(i + 1, len(sorted_annotations), 1):
                 next_model_name = sorted_annotations[j][0]
                 next_annotation_list = sorted_annotations[j][cat_index+1]
                 if not decide_is_distinguishable(cur_annotation_list, next_annotation_list):
-                    if next_model_name not in added_model_set:
-                        added_model_set.add(next_model_name)
-                        
-                    else:
-                        assert False, [cat_index, model_name, next_model_name, len(sorted_annotations), [m[0] for m in sorted_annotations]]
-                    print(f"\tj={j}")
                     rankings[next_model_name].append(i+1)
                     newly_added += 1
-                    # print(added_model_set)
                 else:
                     break
-            # print(len(sorted_annotations))
             i += 1 + newly_added
-            print(f"after i={i}")
-
-            # print(added_model_set)
                         
     # add rankings and sort by average finally
     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
@@ -124,7 +106,6 @@ if __name__ == "__main__":
         nargs="+",
         default=["Generation", "Open QA", "Brainstorm", "Rewrite", "Summarize",
                  "Classify", "Closed QA", "Extract"],
-        nargs="+",
         help="Categories in the HREF to include."
     )
     
