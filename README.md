@@ -154,27 +154,27 @@ href calculate_agreement --annotator meta-llama/Llama-3.1-8B-Instruct
 </details>
 
 
-### Add a new evaluator
+## Add a new evaluator
 For this section, we give instructions on how to add a new evaluator `<new_evaluator>` that can be passed as the argument following `--annotator` for all commands. 
 
-#### Add a non-LLM-based evaluator
+### Add a non-LLM-based evaluator
 1. Create a function for your evaluator in `href/evaluation/evaluators.py`.
 2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 
-#### Add a LLM-based evaluator
+### Add a LLM-based evaluator
 To use LLM-as-a-Judge, we use a external package: a [modified version](https://github.com/tatsu-lab/alpaca_eval) of [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval). To create a new LLM-as-a-judge evaluator, we modify the configuration with the following steps:
 
-##### 1. Create a new prompt template (Optional)
+#### 1. Create a new prompt template (Optional)
 * Create a new prompt template under `href/llm-as-a-judge/prompt_templates`. 
 * Note that besides the text, there are many placeholders of models' special tokens for different models to fit in, do not change their names. 
 * Refer to the existing template to write new templates.
 
-##### 2. Create a new model configuration
+#### 2. Create a new model configuration
 * Add the configuration for `<new_evaluator>` in `href/llm-as-a-judge/model_settings.json`. 
 * The dictionary `template_kwargs` contains keys that corresponds to the placeholders in the prompt templates, please fill the values with the corresponding special token of your model.
 * `fn_completions` and `completions_kwargs` are the configurations for the judge models. You can probably refer to the existing configurations for most of the desired setting. Please refer to [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval) for more advanced settings.
 
-##### 3. Create the configuration file 
+#### 3. Create the configuration file 
 To create the configuration file using the configurations from the previous two steps, run:
 ```bash
 href create_config --model llama-70b --template_name basic_no_reference 
