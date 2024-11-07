@@ -154,7 +154,7 @@ href calculate_agreement --annotator meta-llama/Llama-3.1-8B-Instruct
 </details>
 
 
-## Add a new evaluator
+## Add a New Evaluator
 For this section, we give instructions on how to add a new evaluator `<new_evaluator>` that can be passed as the argument following `--annotator` for all commands. 
 
 ### Add a non-LLM-based evaluator
