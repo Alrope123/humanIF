@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_GROUP_DICT
+from href.evaluation.basic_annotators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
 from collections import Counter
 
 
@@ -80,11 +80,11 @@ def evaluate(args):
         data[category].append(example)
 
     # specify the annotator for each category
-    if args.annotator in ANNOTATOR_GROUP_DICT: # using different annotators for different category
+    if args.annotator in ANNOTATOR_SUITE_DICT: # using different annotators for different category
         for category in args.nr_category:
-            assert category in ANNOTATOR_GROUP_DICT[args.annotator], \
+            assert category in ANNOTATOR_SUITE_DICT[args.annotator], \
             f"Category {category} does not have an assigned annotator by {args.annotator}."
-        category_to_annotator = ANNOTATOR_GROUP_DICT[args.annotator]
+        category_to_annotator = ANNOTATOR_SUITE_DICT[args.annotator]
     else: # one single annotator for all categories
         category_to_annotator = {category: {
                                     'annotator': args.annotator, 

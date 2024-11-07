@@ -1,6 +1,6 @@
 from collections import defaultdict
 
-ANNOTATOR_GROUP_DICT = {
+ANNOTATOR_SUITE_DICT = {
     "ahref": {
         "Brainstorm": {
             "annotator": "llama3.1-70b_basic_no_reference",

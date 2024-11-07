@@ -41,7 +41,7 @@ href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluator.
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/basic_annotators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`
 - ``
 </details>
 
