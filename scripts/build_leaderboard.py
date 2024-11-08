@@ -6,14 +6,58 @@ import csv
 import numpy as np
 from collections import defaultdict
 from scipy import stats
+from itertools import combinations
+import seaborn as sns
+import matplotlib.pyplot as plt
+import pandas as pd
 
+# compute pvalue of the t-test between 
 def get_pvalue_from_paired_t_test(annotation1, annotation2):
     ttest_result = stats.ttest_rel(annotation1, annotation2)
     return ttest_result.pvalue
 
-
+# test if significant
 def decide_is_distinguishable(annotation1, annotation2):
     return get_pvalue_from_paired_t_test(annotation1, annotation2) <= 0.05
+
+
+# create a p-values v.s. data size plot 
+def generate_ttest_plot(annotations, save_path, interval=1000):
+    # randomly shuffle the annotations
+    data_size = len(next(iter(annotations.values())))
+    indices = list(range(data_size))
+    random.shuffle(indices)
+    annotations = {key: [value[i] for i in indices] for key, value in annotations.items()}
+    
+    # get p-values across different size of data to use
+    p_value_indicators = [1]
+    sizes = [0]
+    for size in range(interval, data_size, interval):
+        p_values = []
+         # calculate all pairwise p-values
+        for m1, m2 in combinations(annotations.keys(), 2):
+            p_values.append(get_pvalue_from_paired_t_test(annotations[m1][:size], annotations[m2][:size]))
+        p_values = sorted(p_values)
+        p_value_indicators.append(np.percentile(p_values, 90))
+        sizes.append(size)
+
+    # plotting    
+    fontdict={'fontsize': 15}
+    
+    data = pd.DataFrame({
+        'x': sizes,
+        'y': p_value_indicators
+    })
+    sns.set_theme(style="white")  # Optional: set the style of the plot
+    sns.lineplot(x='x', y='y', data=data, color="#66c2a5", label="90% Percentile")
+    
+    plt.axhline(y=0.05, color='grey', linestyle='--', linewidth=1.5, label='0.05')
+    
+    plt.xlabel("Size", fontdict=fontdict)
+    plt.ylabel("P-Value", fontdict=fontdict)
+    plt.legend(prop={'size': 15})
+
+    plt.savefig(save_path)
 
 
 def main(args):
@@ -72,7 +116,7 @@ def main(args):
                 else:
                     break
             i += 1 + newly_added
-                        
+
     # add rankings and sort by average finally
     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
     sorted_results = [[m] + rates + rankings[m] for m, rates in sorted_positive_rates.items()]
@@ -80,6 +124,10 @@ def main(args):
     # write to the files
     for row in sorted_results:
         leaderboard_csv.writerow(row)
+
+    # output a p-value plot
+    generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
+                        os.path.join(args.save_dir, "p-value_plot.png"))
 
 
 if __name__ == "__main__":
