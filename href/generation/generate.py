@@ -22,7 +22,7 @@ def generate(args):
     need_to_load_model = False
     for category in args.nr_category():
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) + f"-t={args.temperature}" 
+            else args.openai_engine)  
         save_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"), "responses.jsonl")
         need_to_load_model = need_to_load_model or not os.path.exists(save_path)
     if not need_to_load_model:
@@ -102,7 +102,7 @@ def generate(args):
 
         # config saving path
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) + f"-t={args.temperature}" 
+            else args.openai_engine)  
         save_dir = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         save_path = os.path.join(save_dir, "responses.jsonl")
         if os.path.exists(save_path):
@@ -145,7 +145,7 @@ def generate(args):
                 example = {
                     "instruction": prompt,
                     "output": output,
-                    "generator": f"{model_name}-t={args.temperature}",
+                    "generator": f"{model_name}",
                     "dataset": f"href_{category}"
                 }
                 fout.write(json.dumps(example) + "\n")

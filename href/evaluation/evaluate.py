@@ -12,14 +12,14 @@ import href.evaluation.evaluators as annotator_funcs
 def evaluate(args):
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
     model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-        else args.openai_engine) + f"-t={args.temperature}" 
+        else args.openai_engine)  
 
     # generate the model response if haven't
     if args.response_dir is None:
         from href.generation.generate import generate
         generate(args)
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) + f"-t={args.temperature}"
+            else args.openai_engine) 
         logging.info(f"Generating responses from {model_name}")
         response_dir = os.path.join(args.save_dir, model_name)
     else:

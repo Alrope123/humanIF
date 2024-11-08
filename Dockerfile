@@ -119,11 +119,14 @@ WORKDIR /stage/
 COPY requirements.txt .
 RUN ls
 RUN pip install --upgrade pip setuptools==69.5.1 wheel
-RUN pip install -r requirements.txt
+# RUN pip install -r requirements.txt
 # Use v1 of alpaca eval.
 ENV IS_ALPACA_EVAL_2=False
 COPY href href
 COPY results results
+COPY scripts scripts
+COPY README.md .
+COPY requirements.txt .
 COPY setup.py .
 RUN pip install -e .
 
