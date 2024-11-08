@@ -36,7 +36,7 @@ def evaluate(args):
     if any([args.dataset.endswith(f".{suffix}") for suffix in ["csv, json, text"]]): # load from local file
         href_data = datasets.load_dataset(args.dataset.split(".")[-1], data_files=args.dataset)[args.split]
     else: # load from huggingface
-        href_data = datasets.load(args.dataset)[args.split]
+        href_data = datasets.load_dataset(args.dataset)[args.split]
     baseline_responses = defaultdict(list)
     if args.use_human_reference:
         human_references = defaultdict(list)  # category -> list of example dicts
@@ -191,13 +191,13 @@ def main():
         "--annotator",
         type=str,
         default="ahref",
-        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in llm-as-a-judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
+        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="href/LLM-as-a-Judge/configs",
-        help="The directory to contain configures for LLM-as-a-Judge evaluators",
+        default="href/llm_as_a_judge/configs",
+        help="The directory to contain configures for llm_as_a_judge evaluators",
     )
     parser.add_argument(
         "--use_human_reference",
@@ -205,12 +205,6 @@ def main():
         help="Whether of not annotator needs to use the human reference. No need to specify if annotator specifies a evaluator suite."
     )
     # generation arguments
-    parser.add_argument(
-        "--response_dir",
-        type=str, 
-        default=None,
-        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
-    )
     parser.add_argument(
         "--use_vllm",
         action="store_true",
@@ -265,6 +259,11 @@ def main():
         type=str, 
         default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
         help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
+    )
+    parser.add_argument(
+        "--add_generation_prompt",
+        action="store_true",
+        help="If given, add beginning of prompt tokens when applying chat format."
     )
 
     args = parser.parse_args()

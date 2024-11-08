@@ -24,7 +24,7 @@ def remove_substring_between(original_string, start_substring, end_substring):
 def create_config(args):
     random.seed(42)
 
-    model = args.model
+    model = args.model_config_name
     template_name = args.template_name
     config_dir = args.config_dir
     no_example = args.no_example
@@ -32,7 +32,7 @@ def create_config(args):
     do_sampling = temperature > 0.0
     
     # load config template
-    root_directory = os.path.join("href", "LLM-as-a-Judge")
+    root_directory = os.path.join("href", "llm_as_a_judge")
     with open(os.path.join(root_directory, "config_template.yaml"), 'r') as f:
         config = yaml.safe_load(f)
     # load config setting
@@ -85,20 +85,20 @@ def main():
         "--model_config_name",
         type=str,
         required=True,
-        help="The name of the model configuration used as the judge defined in href/llm-as-a-judge/model_settings.json."
+        help="The name of the model configuration used as the judge defined in href/llm_as_a_judge/model_settings.json."
     )
 
     parser.add_argument(
         "--template_name",
         type=str,
         required=True,
-        help="The name of the template file in `href/llm-as-a-judge/prompt_templates` (without the suffix)."
+        help="The name of the template file in `href/llm_as_a_judge/prompt_templates` (without the suffix)."
     )
 
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="href/LLM-as-a-Judge/configs",
+        default="href/llm_as_a_judge/configs",
         help="the directory to save the resulting configuration."
     )
 

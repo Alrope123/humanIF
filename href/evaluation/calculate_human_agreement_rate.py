@@ -215,13 +215,13 @@ def main():
         "--annotator",
         type=str,
         default="ahref",
-        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in llm-as-a-judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
+        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )
     parser.add_argument(
         "--config_dir",
         type=str,
-        default="href/LLM-as-a-Judge/configs",
-        help="The directory to contain configures for LLM-as-a-Judge evaluators",
+        default="href/llm_as_a_judge/configs",
+        help="The directory to contain configures for llm_as_a_judge evaluators",
     )
     parser.add_argument(
         "--use_human_reference",

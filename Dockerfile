@@ -127,7 +127,7 @@ COPY results results
 COPY scripts scripts
 COPY README.md .
 COPY requirements.txt .
-COPY setup.py .
+COPY pyproject.toml .
 RUN pip install -e .
 
 # for interactive session

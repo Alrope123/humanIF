@@ -132,7 +132,8 @@ def create_prompt_with_qwen_chat_format(messages, tokenizer, add_bos=False):
 
 # helper for just using the huggingface tokenizer
 def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False):
-    formatted_text = tokenizer.apply_chat_template(messages, tokenize=False)
+    formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, 
+        add_generation_prompt=args.add_generation_prompt)
     if add_bos:
         formatted_text = tokenizer.bos_token + formatted_text
     return formatted_text

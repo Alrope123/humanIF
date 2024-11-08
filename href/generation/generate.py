@@ -20,7 +20,7 @@ def generate(args):
 
     # we skip everything if all outputs have been generate
     need_to_load_model = False
-    for category in args.nr_category():
+    for category in args.nr_category:
         model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
             else args.openai_engine)  
         save_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"), "responses.jsonl")
@@ -155,12 +155,6 @@ def main():
     parser = argparse.ArgumentParser()
     # general arguments
     parser.add_argument(
-        "--response_dir",
-        type=str, 
-        default=None,
-        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
-    )
-    parser.add_argument(
         "--model_name_or_path",
         type=str,
         default=None,
@@ -211,12 +205,6 @@ def main():
         help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
     )
     # generation arguments
-    parser.add_argument(
-        "--response_dir",
-        type=str, 
-        default=None,
-        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
-    )
     parser.add_argument(
         "--use_vllm",
         action="store_true",
@@ -271,6 +259,11 @@ def main():
         type=str, 
         default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
         help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
+    )
+    parser.add_argument(
+        "--add_generation_prompt",
+        action="store_true",
+        help="If given, add beginning of prompt tokens when applying chat format."
     )
     args = parser.parse_args()
 

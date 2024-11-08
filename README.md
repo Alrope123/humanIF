@@ -42,8 +42,8 @@ href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
-- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
 - `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
@@ -67,7 +67,7 @@ href evaluate --model_name_or_path meta-llama/Llama-3.1-8B-Instruct
 
 To evaluate an OpenAI models, run:
 ```bash
-OPENAI_API_KEY=<your OpenAI key>
+export OPENAI_API_KEY=<your OpenAI key>
 href evaluate --model_name_or_path gpt-4
 ```
 <details>
@@ -85,8 +85,8 @@ href evaluate --model_name_or_path gpt-4
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
-- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
 - `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
@@ -164,8 +164,8 @@ href calculate_agreement --annotator llama3.1-70b_basic_w_reference --use_human_
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for LLM-as-a-Judge that corresponds to a directory in `llm-as-a-judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
-- `--config_dir`: the directory to contain configures for LLM-as-a-Judge evaluators.
+- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
 - `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
@@ -178,15 +178,15 @@ For this section, we give instructions on how to add a new evaluator `<new_evalu
 2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 
 ### LLM-based evaluator
-To use LLM-as-a-Judge, we use a external package: a [modified version](https://github.com/tatsu-lab/alpaca_eval) of [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval). To create a new LLM-as-a-judge evaluator, we modify the configuration with the following steps:
+To use llm_as_a_judge, we use a external package: a [modified version](https://github.com/tatsu-lab/alpaca_eval) of [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval). To create a new llm_as_a_judge evaluator, we modify the configuration with the following steps:
 
 #### 1. Create a new prompt template (Optional)
-* Create a new prompt template under `href/llm-as-a-judge/prompt_templates`. 
+* Create a new prompt template under `href/llm_as_a_judge/prompt_templates`. 
 * Note that besides the text, there are many placeholders of models' special tokens for different models to fit in, do not change their names. 
 * Refer to the existing template to write new templates.
 
 #### 2. Create a new model configuration
-* Add the configuration for `<new_evaluator>` in `href/llm-as-a-judge/model_settings.json`. 
+* Add the configuration for `<new_evaluator>` in `href/llm_as_a_judge/model_settings.json`. 
 * The dictionary `template_kwargs` contains keys that corresponds to the placeholders in the prompt templates, please fill the values with the corresponding special token of your model.
 * `fn_completions` and `completions_kwargs` are the configurations for the judge models. You can probably refer to the existing configurations for most of the desired setting. Please refer to [AlpacaEval](https://github.com/tatsu-lab/alpaca_eval) for more advanced settings.
 
@@ -198,8 +198,8 @@ href create_config --model llama-70b --template_name basic_no_reference
 <details>
 <summary> Required Arguments </summary>
 
-- `--model_config_name`: the name of the model configuration used as the judge defined in `href/llm-as-a-judge/model_settings.json`.
-- `--template_name`: the name of the template file in `href/llm-as-a-judge/prompt_templates` (without the suffix).
+- `--model_config_name`: the name of the model configuration used as the judge defined in `href/llm_as_a_judge/model_settings.json`.
+- `--template_name`: the name of the template file in `href/llm_as_a_judge/prompt_templates` (without the suffix).
 </details>
 
 <details>
@@ -210,7 +210,7 @@ href create_config --model llama-70b --template_name basic_no_reference
 - `--temperature`: the temperature for the judge model.
 </details>
 
-This will create a configuration directory with the name `<new_evaluator>_<new_template_name>` under `href/llm-as-a-judge/configs` than can be passed as the argument following `--annotator`.
+This will create a configuration directory with the name `<new_evaluator>_<new_template_name>` under `href/llm_as_a_judge/configs` than can be passed as the argument following `--annotator`.
 
 ### Evaluator suite
 To create a evaluator suite where different unit evaluators are used for different categories, append to `href/evaluation/evaluators.py/ANNOTATOR_SUITE_DICT` where you specify the unit annotator with `annotator` and whether each annotator uses human reference with `use_human_reference` for each category.
