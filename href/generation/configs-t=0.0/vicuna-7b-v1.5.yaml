@@ -1,0 +1,10 @@
+model_name_or_path: lmsys/vicuna-7b-v1.5
+tokenizer_name_or_path: lmsys/vicuna-7b-v1.5
+use_vllm: true
+use_slow_tokenizer: false
+max_new_tokens: 8192
+temperature: 0.0
+batch_size: 1
+load_in_8bit: false
+gptq: false
+format: "A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: {prompt} ASSISTANT:"

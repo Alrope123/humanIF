@@ -18,8 +18,6 @@ def evaluate(args):
     if args.response_dir is None:
         from href.generation.generate import generate
         generate(args)
-        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine) 
         logging.info(f"Generating responses from {model_name}")
         response_dir = os.path.join(args.save_dir, model_name)
     else:
@@ -47,7 +45,7 @@ def evaluate(args):
         baseline_responses[category].append({
             "instruction": example['instruction'],
             "output": example['output'],
-            "generator": "Meta-Llama-3.1-70B-Instruct",
+            "generator": "Meta-Llama-3.1-405B-Instruct-fp8",
             "dataset": f"href_{category}"
         })
         if args.use_human_reference:

@@ -1,0 +1,25 @@
+<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+You are a helpful assistant that helps us rate an AI model's responses to instructions.<|eot_id|><|start_header_id|>user<|end_header_id|>
+Decide which response from the AI system following the instruction is better, considering the following questions:
+
+1. Does the response precisely follow the instruction? For example, a response that includes unrelated information or does not fulfill the task is not precisely following the instruction. 
+2. Is the response helpful? For example, if the instruction asks for a recipe for healthy food, and the response is a useful recipe, then you can consider it helpful.
+3. Is the response language natural? For example, AI responses are often verbose or repetitive, which is not natural.
+4. Is the response factual/accurate? AI responses often make up new information. For example, if the response claims that Donald Trump is the current U.S. president, then you should consider it inaccurate.
+5. Based on your aesthetics, which one do you prefer? For example, you might prefer one poem over another poem.
+
+Select the response A or B that you prefer, or select tie if the two responses are similarly good or bad. Your answer should ONLY contain: A or B or tie.
+
+
+Now is the real task, just select among: A, B, or tie.
+# Task:
+## Instruction:
+{instruction}
+
+## Response A:
+{output_1}
+
+## Response B:
+{output_2}
+
+## Which is best, A, B, or tie?<|eot_id|><|start_header_id|>assistant<|end_header_id|>

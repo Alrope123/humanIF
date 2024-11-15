@@ -1,5 +1,5 @@
 
-def create_prompt_with_tulu_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True):
+def create_prompt_with_tulu_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True, add_generation_prompt=False):
     formatted_text = ""
     for message in messages:
         if message["role"] == "system":
@@ -17,7 +17,7 @@ def create_prompt_with_tulu_chat_format(messages, tokenizer, bos="<s>", eos="</s
     return formatted_text
 
 # weirdness with olmo tokenizer means IP_ADDR is the eos token.
-def create_prompt_with_olmo_chat_format(messages, tokenizer, bos="|||IP_ADDRESS|||", eos="|||IP_ADDRESS|||", add_bos=True):
+def create_prompt_with_olmo_chat_format(messages, tokenizer, bos="|||IP_ADDRESS|||", eos="|||IP_ADDRESS|||", add_bos=True, add_generation_prompt=False):
     formatted_text = ""
     for message in messages:
         if message["role"] == "system":
@@ -35,7 +35,7 @@ def create_prompt_with_olmo_chat_format(messages, tokenizer, bos="|||IP_ADDRESS|
     return formatted_text
 
 
-def create_prompt_with_llama2_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True):
+def create_prompt_with_llama2_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True, add_generation_prompt=False):
     '''
     This function is adapted from the official llama2 chat completion script: 
     https://github.com/facebookresearch/llama/blob/7565eb6fee2175b2d4fe2cfb45067a61b35d7f5e/llama/generation.py#L274
@@ -66,7 +66,7 @@ def create_prompt_with_llama2_chat_format(messages, tokenizer, bos="<s>", eos="<
     return formatted_text
 
 
-def create_prompt_with_xwin_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True):
+def create_prompt_with_xwin_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True, add_generation_prompt=False):
     '''
     This function is adapted from the official xwin chat completion script:
     https://huggingface.co/Xwin-LM/Xwin-LM-70B-V0.1
@@ -82,7 +82,7 @@ def create_prompt_with_xwin_chat_format(messages, tokenizer, bos="<s>", eos="</s
     return formatted_text
 
 
-def create_prompt_with_zephyr_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True):
+def create_prompt_with_zephyr_chat_format(messages, tokenizer, bos="<s>", eos="</s>", add_bos=True, add_generation_prompt=False):
     '''
     This function is adapted from the official zephyr chat completion script:
     https://huggingface.co/HuggingFaceH4/zephyr-7b-beta
@@ -109,31 +109,31 @@ def create_prompt_with_zephyr_chat_format(messages, tokenizer, bos="<s>", eos="<
     return formatted_text    
 
 
-def create_prompt_with_koala_chat_format(messages, tokenizer, add_bos=False):
+def create_prompt_with_koala_chat_format(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     return f"BEGINNING OF CONVERSATION: USER: {messages[0]['content']} GPT:"
 
 
-def create_prompt_with_vicuna_or_chat_format(messages, tokenizer, add_bos=False):
+def create_prompt_with_vicuna_or_chat_format(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     return f"A chat between a curious user and an artificial intelligence assistant. The assistant gives helpful, detailed, and polite answers to the user's questions. USER: {messages[0]['content']} ASSISTANT:"
 
 
-def create_prompt_with_oasst_chat_format(messages, tokenizer, add_bos=False):
+def create_prompt_with_oasst_chat_format(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     return f"<|prompter|>{messages[0]['content']}<|endoftext|><|assistant|>"
 
 
-def create_prompt_with_mpt_chat_format(messages, tokenizer, add_bos=False):
+def create_prompt_with_mpt_chat_format(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     return f"Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{messages[0]['content']}\n\n### Response:\n"
 
 
-def create_prompt_with_qwen_chat_format(messages, tokenizer, add_bos=False):
+def create_prompt_with_qwen_chat_format(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     messages.insert(0, {"role": "system", "content": "You are a helpful assistant."})
     return create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos)
 
 
 # helper for just using the huggingface tokenizer
-def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False):
+def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False, add_generation_prompt=False):
     formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, 
-        add_generation_prompt=args.add_generation_prompt)
+        add_generation_prompt=add_generation_prompt)
     if add_bos:
         formatted_text = tokenizer.bos_token + formatted_text
     return formatted_text

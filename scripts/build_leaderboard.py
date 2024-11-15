@@ -22,7 +22,7 @@ def decide_is_distinguishable(annotation1, annotation2):
 
 
 # create a p-values v.s. data size plot 
-def generate_ttest_plot(annotations, save_path, interval=1000):
+def generate_ttest_plot(annotations, save_path, interval=100, percentile=90):
     # randomly shuffle the annotations
     data_size = len(next(iter(annotations.values())))
     indices = list(range(data_size))
@@ -38,7 +38,7 @@ def generate_ttest_plot(annotations, save_path, interval=1000):
         for m1, m2 in combinations(annotations.keys(), 2):
             p_values.append(get_pvalue_from_paired_t_test(annotations[m1][:size], annotations[m2][:size]))
         p_values = sorted(p_values)
-        p_value_indicators.append(np.percentile(p_values, 90))
+        p_value_indicators.append(np.percentile(p_values, percentile))
         sizes.append(size)
 
     # plotting    
@@ -49,7 +49,7 @@ def generate_ttest_plot(annotations, save_path, interval=1000):
         'y': p_value_indicators
     })
     sns.set_theme(style="white")  # Optional: set the style of the plot
-    sns.lineplot(x='x', y='y', data=data, color="#66c2a5", label="90% Percentile")
+    sns.lineplot(x='x', y='y', data=data, color="#66c2a5", label=f"{percentile}% Percentile")
     
     plt.axhline(y=0.05, color='grey', linestyle='--', linewidth=1.5, label='0.05')
     
@@ -128,6 +128,71 @@ def main(args):
     # output a p-value plot
     generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
                         os.path.join(args.save_dir, "p-value_plot.png"))
+    
+    # Latex code
+    int_to_letter = {
+        '0': 'a', '1': 'b', '2': 'c', '3': 'd', '4': 'e',
+        '5': 'f', '6': 'g', '7': 'h', '8': 'i', '9': 'j'
+    }
+    import re
+    SUFFIX = {
+        "Brainstorm": "b",         
+        "Generation": "g",         
+        "Rewrite": "r",                  
+        "Open QA": "oq",                  
+        "Classify": "c",
+        "Summarize": "s",
+        "Extract": "e",
+        "Closed QA": "cq",
+        'Fact Checking or Attributed QA': "f",
+        'Multi-Document Synthesis': "m",
+        'Reasoning Over Numerical Data': "ro",
+        "Micro Average": "o",
+        "Ranking": "rk" 
+    }
+
+    split = "dev"
+
+    all_commands = []
+    table_row = []
+    for model in sorted_positive_rates:
+        # Generate Overleaf
+        overall_outputs = {} 
+        for i, category in enumerate(nr_category):
+            overall_outputs[category] = positive_rates[model][i]
+
+        overall_outputs["Micro Average"] = positive_rates[model][-1]
+        overall_outputs["Ranking"] = rankings[model][-1]
+        model_prefix = model.split("-t=")[0].replace('-','').replace("_", '').lower()
+        model_prefix = ''.join(int_to_letter[char] if char in int_to_letter else char for char in model_prefix)
+        model_prefix = re.sub(r'[\d\.]', '', model_prefix)
+        
+        command_template = "\\newcommand{\cmd}{num}"
+        categorical_commands = []
+        for category, num in overall_outputs.items():
+            if type(num) != int:
+                num = str(round(num * 100, 1))
+            else:
+                num = str(num)
+                # continue
+            categorical_command = model_prefix + SUFFIX[category] + ("d" if split == "dev" else "") 
+            all_commands.append(command_template.replace('cmd', categorical_command).replace('num', num))
+            categorical_commands.append(categorical_command)
+        
+        row_string = model.split("-t=")[0] + f"({overall_outputs['Ranking']})"
+        for i, cmd in enumerate(categorical_commands):
+            if i == len(categorical_commands) - 1:
+                break
+            row_string += f" & \{cmd}"
+        row_string += " \\\\"
+        table_row.append(row_string)
+
+
+    for cmd in all_commands:
+        print(cmd)
+
+    for row in table_row:
+        print(row)
 
 
 if __name__ == "__main__":
@@ -144,7 +209,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--annotator",
         type=str,
-        default='NAMME',
+        default='ahref',
         help="Name of the evaluator that generated the annotation results."
     )
 

@@ -1,0 +1,17 @@
+llama3.1-70b_basic_w_reference_no_ex:
+  batch_size: 1
+  completion_parser_kwargs:
+    matcher:
+      A: 1.0
+      B: 2.0
+      tie: 0.0
+  completions_kwargs:
+    do_sample: false
+    max_new_tokens: 100
+    model_kwargs:
+      torch_dtype: float16
+    model_name: /model
+    temperature: 0.0
+  fn_completion_parser: match_parser
+  fn_completions: huggingface_local_completions
+  prompt_template: llama3.1-70b_basic_w_reference_no_ex/prompt.txt

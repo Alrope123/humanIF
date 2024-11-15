@@ -1,6 +1,8 @@
 data
-results
+results*/
 results_dev
 **/__pycache__/
 href.egg-info
 beaker_configs/auto_created
+commands*.sh
+logs

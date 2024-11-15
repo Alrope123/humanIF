@@ -9,7 +9,7 @@ llama3.1_basic_w_reference:
     max_new_tokens: 100
     model_kwargs:
       torch_dtype: float16
-    model_name: meta-llama/Meta-Llama-3.1-8B-Instruct
+    model_name: meta-llama/Llama-3.1-8B-Instruct
     temperature: 0
   fn_completion_parser: match_parser
   fn_completions: huggingface_local_completions

@@ -1,0 +1,10 @@
+model_name_or_path: mosaicml/mpt-7b-chat
+tokenizer_name_or_path: mosaicml/mpt-7b-chat
+use_vllm: true
+use_slow_tokenizer: false
+max_new_tokens: 8192
+temperature: 0.0
+batch_size: 1
+load_in_8bit: false
+gptq: false
+format: 'Below is an instruction that describes a task. Write a response that appropriately completes the request.\n\n### Instruction:\n{prompt}\n\n### Response:\n'

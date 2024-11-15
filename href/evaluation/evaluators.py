@@ -95,7 +95,7 @@ ANNOTATOR_SUITE_DICT = {
     },
 }
 
-DEFINED_ANNOTATORS = ["short", "long", "random", "bertscore", "rouge-1"]
+DEFINED_ANNOTATORS = ["short", "long", "random_no_tie", "bertscore", "rouge"]
 
 def bertscore(responses_1, responses_2, human_references, args):
     from bert_score import BERTScorer
@@ -168,7 +168,7 @@ def long(model_responses, baseline_responses, human_references, args):
     for res1, res2 in zip(model_responses, baseline_responses):
         if len(res1["output"]) > len(res2["output"]):
             score = 1.0
-        if len(res1["output"]) < len(res2["output"]):
+        elif len(res1["output"]) < len(res2["output"]):
             score = 2.0
         else:
             score = 0.0
@@ -190,11 +190,10 @@ def short(model_responses, baseline_responses, human_references, args):
     for res1, res2 in zip(model_responses, baseline_responses):
         if len(res1["output"]) < len(res2["output"]):
             score = 1.0
-        if len(res1["output"]) > len(res2["output"]):
+        elif len(res1["output"]) > len(res2["output"]):
             score = 2.0
         else:
             score = 0.0
-
         annotations.append({
             "instruction": res1["instruction"],
             "output_1": res1["output"],
@@ -207,7 +206,8 @@ def short(model_responses, baseline_responses, human_references, args):
     return annotations
 
 
-def random(model_responses, baseline_responses, human_references, args):
+def random_no_tie(model_responses, baseline_responses, human_references, args):
+    import random
     annotations = []
     for res1, res2 in zip(model_responses, baseline_responses):
         score = 1.0 if bool(random.getrandbits(1)) else 2.0
@@ -220,4 +220,41 @@ def random(model_responses, baseline_responses, human_references, args):
             "annotator": "short",
             "preference": score
         })
+    return annotations
+
+
+def perplexity(model_responses, baseline_responses, human_references, category, args):
+    import os
+    import json
+
+    generator_model = model_responses[0]["generator"]
+    generator_baseline = baseline_responses[0]["generator"]
+    # load model generated perplexities
+    model_perplexities = defaultdict(list)
+    with open(os.path.join(args.perplexity_dir, generator_model, category.lower().replace(" ", "_"), "loss.jsonl"), "r") as fin:
+        model_perplexities[category].extend([json.loads(line) for line in fin])
+    baseline_perplexities = defaultdict(list)
+    with open(os.path.join(args.perplexity_dir, generator_baseline, category.lower().replace(" ", "_"), "loss.jsonl"), "r") as fin:
+        baseline_perplexities[category].extend([json.loads(line) for line in fin])
+    
+    annotations = []
+    for res1, ppl1, res2, ppl2, res_human in zip(model_responses, model_perplexities, baseline_responses, baseline_perplexities, human_references):
+        assert ppl1['reference'] == ppl2['reference'] and ppl1['reference'] == res_human['output'], "Plexities doesn't match"
+        if ppl1["output"] < ppl2["output"]:
+            score = 1.0
+        if ppl1["output"] > ppl2["output"]:
+            score = 2.0
+        else:
+            score = 0.0
+
+        annotations.append({
+            "instruction": res1["instruction"],
+            "output_1": res1["output"],
+            "generator_1": res1["generator"],
+            "output_2": res2["output"],
+            "generator_2": res2["generator"],
+            "annotator": "perplexity",
+            "preference": score
+        })
+
     return annotations

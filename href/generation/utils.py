@@ -1,4 +1,5 @@
 import torch
+import torch.nn.functional as F
 import tqdm
 import os
 from importlib import import_module
@@ -91,6 +92,62 @@ def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequen
     return generations
 
 
+@torch.no_grad()
+def generate_perplexities(model, tokenizer, prompts, batch_size=1, add_special_tokens=True, disable_tqdm=False, **kwargs):
+    perplexities = []
+    if not disable_tqdm:
+        progress = tqdm.tqdm(total=len(prompts), desc="Generating Perplexity")
+
+    num_return_sequences = kwargs.get("num_return_sequences", 1)
+
+    for i in range(0, len(prompts), batch_size):
+        a = prompts[i]
+        batch_prompts = prompts[i:i+batch_size]
+        tokenized_prompts = tokenizer(batch_prompts, padding="longest", return_tensors="pt",
+                                        truncation=True, add_special_tokens=add_special_tokens, **kwargs)
+        batch_input_ids = tokenized_prompts.input_ids
+        attention_mask = tokenized_prompts.attention_mask
+
+        if model.device.type == "cuda":
+            batch_input_ids = batch_input_ids.cuda()
+            attention_mask = attention_mask.cuda()
+
+        try:
+            batch_outputs = model(
+                input_ids=batch_input_ids,
+                attention_mask=attention_mask,
+            )
+            batch_logits = batch_outputs.logits
+
+            # Calculate loss for each prompt in the batch
+            batch_perplexities = []
+            for idx, prompt in enumerate(batch_prompts):
+                prompt_length = (attention_mask[idx] == 1).sum()  # Length of prompt in tokens
+                logits_for_prompt = batch_logits[idx, :prompt_length - 1]  # Ignore last token for perplexity calculation
+                batch_target_ids = batch_input_ids[idx, 1:prompt_length]
+
+                # Cross entropy loss between model predictions and actual next tokens
+                loss = F.cross_entropy(logits_for_prompt.view(-1, logits_for_prompt.size(-1)), batch_target_ids, reduction='mean')
+                perplexity = torch.exp(loss).item()
+                batch_perplexities.append(perplexity)
+
+        except Exception as e:
+            print("Error when generating perplexity for batch:")
+            print(batch_prompts)
+            print("Error message:")
+            print(e)
+            print("Use empty string as the completion.")
+            batch_perplexities = [""] * len(batch_prompts) * num_return_sequences
+
+        perplexities += batch_perplexities
+
+        if not disable_tqdm:
+            progress.update(len(batch_prompts)//num_return_sequences)
+
+    assert len(perplexities) == len(prompts) * num_return_sequences, "number of generations should be equal to number of prompts * num_return_sequences"
+    return perplexities
+
+
 def load_hf_lm(
         model_name_or_path, 
         device_map="auto", 
@@ -101,9 +158,8 @@ def load_hf_lm(
         token=os.getenv("HF_TOKEN", None),
     ):
 
-    trust_remote_code = True
-
     from transformers import AutoModelForCausalLM, AutoTokenizer, OPTForCausalLM, GPTNeoXForCausalLM
+    trust_remote_code = True
     if gptq_model:
         from auto_gptq import AutoGPTQForCausalLM
         model_wrapper = AutoGPTQForCausalLM.from_quantized(
@@ -150,13 +206,15 @@ def load_hf_tokenizer(
     ):
         from transformers import AutoTokenizer
 
+        trust_remote_code = True
+
         if not tokenizer_name_or_path:
             tokenizer_name_or_path = model_name_or_path
         try:
-            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, use_fast=use_fast_tokenizer, token=token)
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, use_fast=use_fast_tokenizer, token=token, trust_remote_code=trust_remote_code)
         except:
             # some tokenizers (e.g., GPTNeoXTokenizer) don't have the slow or fast version, so we just roll back to the default one
-            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, token=token)
+            tokenizer = AutoTokenizer.from_pretrained(tokenizer_name_or_path, token=token, trust_remote_code=trust_remote_code)
         # set padding side to left for batch generation
         tokenizer.padding_side = padding_side
         # set pad token to eos token if pad token is not set (as is the case for llama models)
@@ -164,6 +222,15 @@ def load_hf_tokenizer(
             tokenizer.pad_token = tokenizer.eos_token
             tokenizer.pad_token_id = tokenizer.eos_token_id
         return tokenizer
+
+
+def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False, add_generation_prompt=False):
+    formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, 
+        add_generation_prompt=add_generation_prompt)
+    if add_bos:
+        formatted_text = tokenizer.bos_token + formatted_text
+    return formatted_text
+
 
 def dynamic_import_function(function_path):
     '''

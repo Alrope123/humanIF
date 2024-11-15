@@ -17,12 +17,12 @@ def generate(args):
     assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
     if args.tokenizer_name_or_path is None:
         args.tokenizer_name_or_path = args.model_name_or_path
+    model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+            else args.openai_engine)
 
     # we skip everything if all outputs have been generate
     need_to_load_model = False
     for category in args.nr_category:
-        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine)  
         save_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"), "responses.jsonl")
         need_to_load_model = need_to_load_model or not os.path.exists(save_path)
     if not need_to_load_model:
@@ -82,7 +82,8 @@ def generate(args):
                 formatted_prompts = []
                 for prompt in category_prompts:
                     messages = [{"role": "user", "content": prompt}]
-                    prompt = chat_formatting_function(messages, tokenizer, add_bos=False)
+                    prompt = chat_formatting_function(messages, tokenizer, add_bos=False, 
+                                add_generation_prompt=args.add_generation_prompt)
                     formatted_prompts.append(prompt)
                 prompts[category] = formatted_prompts
         else:
@@ -101,8 +102,6 @@ def generate(args):
         assert category in args.nr_category
 
         # config saving path
-        model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-            else args.openai_engine)  
         save_dir = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         save_path = os.path.join(save_dir, "responses.jsonl")
         if os.path.exists(save_path):

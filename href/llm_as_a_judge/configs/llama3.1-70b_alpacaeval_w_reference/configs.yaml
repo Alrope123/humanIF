@@ -1,0 +1,11 @@
+llama3.1-70b_alpacaeval_w_reference:
+  prompt_template: "llama3.1-70b_alpacaeval_w_reference/prompt.txt"
+  fn_completions: huggingface_local_completions
+  completions_kwargs:
+    max_new_tokens: 100
+    model_kwargs:
+    torch_dtype: float16
+    model_name: /model
+    temperature: 0
+  fn_completion_parser: "ranking_parser"
+  batch_size: 1
