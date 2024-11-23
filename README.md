@@ -2,8 +2,12 @@
 
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-red.svg)](#python)
 
+<div align="center">
+
 📑 [Paper]() | 🤗 [Leaderboard]() | 🤗 [Validation Set]() | 🤗 [Human Agreement Set]()
- ![HREF logo](assets/logo.webp)
+
+ <img src="assets/logo_cropped.webp" alt="HREF logo" height="300"/>
+</div>
 
 ### Announcement
 * **11/07/2024**: 🌟We officially publish the paper [HREF paper](), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 🌟
