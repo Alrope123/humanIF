@@ -125,7 +125,7 @@ Please follow the logic how we implement OpenAI API in `href/generation/generate
 To build the leaderboard using the evaluation results, run:
 ```bash
 python scripts/build_leaderboard.py \
-    --models <model 1> <model 2> ... <model n> \
+    --models <model_1> <model_2> ... <model_n> \
     --result_dir <path to directory that contains results>
 ```
 <details>
@@ -240,7 +240,7 @@ href calculate_agreement --annotator `<new_evaluator_suite>`
 To compare the human agreement rates among different annotators, run:
 ```bash
 python scripts/compare_annotators.py \
-    --annotators <evaluator 1> <evaluator 2> ... <evaluator n>  \
+    --annotators <evaluator_1> <evaluator_2> ... <evaluator_n>  \
     --result_dir <path to directory that contains results>
 ```
 <details>
