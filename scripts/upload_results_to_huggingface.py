@@ -9,6 +9,38 @@ from itertools import combinations
 import pandas as pd
 import yaml
 from huggingface_hub import HfApi
+from tqdm import tqdm
+
+def bootstrap(data, num_resamples=5000, statistic=np.mean, seed=None):
+    """
+    Perform bootstrap resampling on a list of scores.
+
+    Parameters:
+    - data (list or array): The data to bootstrap (e.g., list of scores).
+    - num_resamples (int): The number of bootstrap samples to generate.
+    - statistic (function): The statistic to compute on each resample (e.g., np.mean, np.median).
+    - seed (int or None): Seed for the random number generator (optional).
+
+    Returns:
+    - bootstrapped_stats (array): An array of the computed statistic for each bootstrap sample.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    data = np.array(data)
+    bootstrapped_stats = []
+
+    for _ in range(num_resamples):
+        # Resample with replacement
+        sample = np.random.choice(data, size=len(data), replace=True)
+        # Compute the statistic on the resample
+        bootstrapped_stat = statistic(sample)
+        bootstrapped_stats.append(bootstrapped_stat)
+
+    lower_bound = np.percentile(bootstrapped_stats, 2.5)
+    upper_bound = np.percentile(bootstrapped_stats, 97.5)
+    return np.array(bootstrapped_stats), lower_bound, upper_bound
+
 
 # compute pvalue of the t-test between 
 def get_pvalue_from_paired_t_test(annotation1, annotation2):
@@ -17,8 +49,17 @@ def get_pvalue_from_paired_t_test(annotation1, annotation2):
 
 
 # test if significant
-def decide_is_distinguishable(annotation1, annotation2):
-    return get_pvalue_from_paired_t_test(annotation1, annotation2) <= 0.05
+# def decide_is_distinguishable(annotation1, annotation2):
+#     return get_pvalue_from_paired_t_test(annotation1, annotation2) <= 0.05
+
+def decide_is_distinguishable(ci1, ci2):
+    return ci1[3] > ci2[2] or ci1[2] < ci2[3]
+
+
+def calculate_win_rate(annotations):
+    win_annotations = [cur_a in [2.0] for cur_a in annotations]
+    tie_annotations = [cur_a in [0.0] for cur_a in annotations]
+    return sum(win_annotations) / len(win_annotations) + sum(tie_annotations) / len(tie_annotations) / 2
 
 
 def upload(args):
@@ -33,56 +74,92 @@ def upload(args):
 
     # initialize csv file
     os.makedirs(os.path.join(save_dir, subset_name), exist_ok=True)
-    titles = [c.lower().replace(" ", "_") for c in nr_category] + ["average"] + [f"{cat.lower().replace(" ", "_")}_rank" for cat in nr_category] + ["average_rank"]
+    results_titles = [c.lower().replace(" ", "_") for c in nr_category] + ["average"] 
+    rank_titles = [f"{cat.lower().replace(" ", "_")}_rank" for cat in nr_category] + ["average_rank"]
+    confi_titles = [f"{cat.lower().replace(" ", "_")}_confi" for cat in nr_category] + ["average_confi"]
 
     # read annotations
     positive_rates = defaultdict(list)
     annotations = defaultdict(list)
-    for model in models:
+    confidence_interval=defaultdict(list)
+    for model in tqdm(models):
         for category in nr_category:
             category_name = category.lower().replace(' ', '_')
             cur_annotations = json.load(open(os.path.join(result_dir, model, category_name, annotator, "annotations.json"), 'r'))
             cur_annotations = [cur_a['preference'] for cur_a in cur_annotations]
-            positive_annotations = [cur_a in [2.0, 0.0] for cur_a in cur_annotations]
-            positive_rates[model].append(sum(positive_annotations) / len(positive_annotations))
+            positive_rate = calculate_win_rate(cur_annotations)
+            positive_rates[model].append(positive_rate)
+            _, lower, upper = bootstrap(cur_annotations, statistic=calculate_win_rate)
+            confidence_interval[model].append((upper-positive_rate, lower-positive_rate, upper, lower))
             cur_annotations = [cur_a if cur_a is not None else -1 for cur_a in cur_annotations]
             annotations[model].append(cur_annotations)
 
-        average_positive_rate = np.mean(positive_rates[model])
         model_annotations = [a for cat_annotations in annotations[model] for a in cat_annotations]
+        average_positive_rate = calculate_win_rate(model_annotations)
         positive_rates[model].append(average_positive_rate)
+        _, lower, upper = bootstrap(model_annotations, statistic=calculate_win_rate)
+        confidence_interval[model].append((upper-average_positive_rate, lower-average_positive_rate, upper, lower))
         annotations[model].append(model_annotations)
+
+    # calculate ranking
+    # rankings = defaultdict(list)
+    # for cat_index, cat in enumerate((nr_category + ["Average"])):
+    #     # sort data by average
+    #     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
+    #     sorted_annotations = [[m] + annotations[m] for m in sorted_positive_rates]
+
+    #     # decide distinguishibility ranking
+    #     i = 0
+    #     while i < len(sorted_annotations):
+    #         model_name = sorted_annotations[i][0]
+    #         cur_annotation_list = sorted_annotations[i][cat_index+1]
+    #         # decide if the following model is distinguishable from the current
+    #         rankings[model_name].append(i+1)
+    #         newly_added = 0
+    #         for j in range(i + 1, len(sorted_annotations), 1):
+    #             next_model_name = sorted_annotations[j][0]
+    #             next_annotation_list = sorted_annotations[j][cat_index+1]
+    #             if not decide_is_distinguishable(cur_annotation_list, next_annotation_list):
+    #                 rankings[next_model_name].append(i+1)
+    #                 newly_added += 1
+    #             else:
+    #                 break
+    #         i += 1 + newly_added
 
     # calculate ranking
     rankings = defaultdict(list)
     for cat_index, cat in enumerate((nr_category + ["Average"])):
         # sort data by average
         sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
-        sorted_annotations = [[m] + annotations[m] for m in sorted_positive_rates]
+        sorted_ci = [[m] + confidence_interval[m] for m in sorted_positive_rates]
 
         # decide distinguishibility ranking
         i = 0
-        while i < len(sorted_annotations):
-            model_name = sorted_annotations[i][0]
-            cur_annotation_list = sorted_annotations[i][cat_index+1]
+        while i < len(sorted_ci):
+            model_name = sorted_ci[i][0]
+            cur_confidence_interval = sorted_ci[i][cat_index+1]
             # decide if the following model is distinguishable from the current
             rankings[model_name].append(i+1)
             newly_added = 0
-            for j in range(i + 1, len(sorted_annotations), 1):
-                next_model_name = sorted_annotations[j][0]
-                next_annotation_list = sorted_annotations[j][cat_index+1]
-                if not decide_is_distinguishable(cur_annotation_list, next_annotation_list):
+            for j in range(i + 1, len(sorted_ci), 1):
+                next_model_name = sorted_ci[j][0]
+                next_confidence_interval = sorted_ci[j][cat_index+1]
+                if not decide_is_distinguishable(cur_confidence_interval, next_confidence_interval):
                     rankings[next_model_name].append(i+1)
                     newly_added += 1
                 else:
                     break
             i += 1 + newly_added
 
+    
+
     # add rankings and sort by average finally
     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
-    sorted_results = [[m] + rates + rankings[m] for m, rates in sorted_positive_rates.items()]
+    sorted_results = [[m] + rates for m, rates in sorted_positive_rates.items()]
+    sorted_rank = [rankings[m] for m in sorted_positive_rates]
+    sorted_config = [confidence_interval[m] for m in sorted_positive_rates]
 
-    for result in sorted_results:
+    for result, rank, confi in zip(sorted_results, sorted_rank, sorted_config):
         model = result[0]
         # get model path
         config_path = os.path.join(args.config_dir, f"{model}.yaml")
@@ -90,7 +167,11 @@ def upload(args):
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
         output_json = {"path": config['model_name_or_path']}
-        output_json.update({titles[i]: result[i+1] for i in range(len(titles))})
+        output_json.update({results_titles[i]: round(result[i+1], 4 if "average" in results_titles[i] else 3) for i in range(len(results_titles))})
+        output_json.update({title: rank[i] for i, title in enumerate(rank_titles)})
+        output_json.update({title: f"+{100*confi[i][0]:.2f} / -{abs(100*confi[i][1]):.2f}" if "average" in title else
+            f"+{100*confi[i][0]:.1f} / -{abs(100*confi[i][1]):.1f}"  
+            for i, title in enumerate(confi_titles)})
         json.dump(output_json, open(os.path.join(save_dir, subset_name, f"{model}.json"), 'w'), indent=4)
 
     # files = api.list_repo_files(repo_id=args.dataset, repo_type="dataset")

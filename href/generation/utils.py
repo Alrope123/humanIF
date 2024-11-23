@@ -93,7 +93,7 @@ def generate_completions(model, tokenizer, prompts, batch_size=1, stop_id_sequen
 
 
 @torch.no_grad()
-def generate_perplexities(model, tokenizer, prompts, batch_size=1, add_special_tokens=True, disable_tqdm=False, **kwargs):
+def generate_perplexities(model, tokenizer, prompts, responses, batch_size=1, add_special_tokens=True, disable_tqdm=False, **kwargs):
     perplexities = []
     if not disable_tqdm:
         progress = tqdm.tqdm(total=len(prompts), desc="Generating Perplexity")
@@ -101,12 +101,15 @@ def generate_perplexities(model, tokenizer, prompts, batch_size=1, add_special_t
     num_return_sequences = kwargs.get("num_return_sequences", 1)
 
     for i in range(0, len(prompts), batch_size):
-        a = prompts[i]
         batch_prompts = prompts[i:i+batch_size]
+        batch_responses = prompts[i:i+batch_size]
         tokenized_prompts = tokenizer(batch_prompts, padding="longest", return_tensors="pt",
+                                        truncation=True, add_special_tokens=add_special_tokens, **kwargs)
+        tokenized_responses = tokenizer(batch_responses, padding="longest", return_tensors="pt",
                                         truncation=True, add_special_tokens=add_special_tokens, **kwargs)
         batch_input_ids = tokenized_prompts.input_ids
         attention_mask = tokenized_prompts.attention_mask
+        attention_mask_response = tokenized_responses.attention_mask
 
         if model.device.type == "cuda":
             batch_input_ids = batch_input_ids.cuda()
@@ -123,8 +126,10 @@ def generate_perplexities(model, tokenizer, prompts, batch_size=1, add_special_t
             batch_perplexities = []
             for idx, prompt in enumerate(batch_prompts):
                 prompt_length = (attention_mask[idx] == 1).sum()  # Length of prompt in tokens
-                logits_for_prompt = batch_logits[idx, :prompt_length - 1]  # Ignore last token for perplexity calculation
-                batch_target_ids = batch_input_ids[idx, 1:prompt_length]
+                response_length = (attention_mask[idx] == 1).sum()
+                response_begin_idx = prompt_length - response_length
+                logits_for_prompt = batch_logits[response_begin_idx, :prompt_length - 1]  # Ignore last token for perplexity calculation
+                batch_target_ids = batch_input_ids[response_begin_idx, 1:prompt_length]
 
                 # Cross entropy loss between model predictions and actual next tokens
                 loss = F.cross_entropy(logits_for_prompt.view(-1, logits_for_prompt.size(-1)), batch_target_ids, reduction='mean')
@@ -224,7 +229,7 @@ def load_hf_tokenizer(
         return tokenizer
 
 
-def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False, add_generation_prompt=False):
+def create_prompt_with_huggingface_tokenizer_template(messages, tokenizer, add_bos=False, add_generation_prompt=True):
     formatted_text = tokenizer.apply_chat_template(messages, tokenize=False, 
         add_generation_prompt=add_generation_prompt)
     if add_bos:

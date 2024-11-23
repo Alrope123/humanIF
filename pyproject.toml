@@ -43,6 +43,6 @@ include = ["href*"]
 exclude = ["tests*", "docs*"]
 
 [project.scripts]
-evaluate = "href.evaluation:evaluate.main"
+evaluate = "href.evaluation.evaluate:main"
 calculate_agreement = "href.evaluation.calculate_human_agreement_rate:main"
 create_config = "href.llm_as_a_judge.create_config:main"

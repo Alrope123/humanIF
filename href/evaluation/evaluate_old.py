@@ -10,8 +10,9 @@ from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
 import href.evaluation.evaluators as annotator_funcs
 
 def evaluate(args):
-    assert args.model_name is not None, "Model name should be specified."
-    model_name = args.model_name
+    assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
+    model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
+        else args.openai_engine)  
 
     # generate the model response if haven't
     if args.response_dir is None:
@@ -44,7 +45,7 @@ def evaluate(args):
         baseline_responses[category].append({
             "instruction": example['instruction'],
             "output": example['output'],
-            "generator": "Meta-Llama-3.1-70B-Instruct",
+            "generator": "Meta-Llama-3.1-405B-Instruct-FP8",
             "dataset": f"href_{category}"
         })
         if args.use_human_reference:
@@ -83,12 +84,7 @@ def evaluate(args):
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
 
-        
-        if annotator == "perplexity":
-            assert args.perplexity_path is not None, "Needs to specify a perplexity dir"
-            evaluate_func = getattr(annotator_funcs, annotator)
-            evaluate_func(category_baseline_responses, category_model_responses, category_human_references, category, args)
-        elif annotator in DEFINED_ANNOTATORS: # non-llm annotators
+        if annotator in DEFINED_ANNOTATORS: # non-llm annotators
             # run the according evaluation function
             evaluate_func = getattr(annotator_funcs, annotator)
             cur_annotations = evaluate_func(category_baseline_responses, category_model_responses, category_human_references, args)
@@ -139,16 +135,16 @@ def main():
         help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
     )
     parser.add_argument(
-        "--perplexity_dir",
-        type=str, 
-        default=None,
-        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
-    )
-    parser.add_argument(
-        "--model_name",
+        "--model_name_or_path",
         type=str,
         default=None,
         help="The huggingface model name or the path to a local directory that contains the model to use for evaluation.",
+    )
+    parser.add_argument(
+        "--openai_engine",
+        type=str,
+        default=None,
+        help="If specified, we will use the OpenAI API to generate the predictions.",
     )
     parser.add_argument(
         "--dataset",
@@ -208,12 +204,65 @@ def main():
     )
     # generation arguments
     parser.add_argument(
-        "--generation_config_dir",
-        type=str,
-        default="configs_mine-t=0.0",
-        help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
+        "--use_vllm",
+        action="store_true",
+        help="If given, we will use vLLM to generate the predictions - much faster.",
     )
-    args = parser.parse_args()
+    parser.add_argument(
+        "--tokenizer_name_or_path",
+        type=str,
+        default=None,
+        help="The huggingface tokenizer name or the path to a local directory that contains the tokenizer to use for evaluation. If not specified, we will use the same ones as `model_name_or_path`.",
+    )
+    parser.add_argument(
+        "--use_slow_tokenizer",
+        action="store_true",
+        help="If given, we will use the slow tokenizer."
+    )
+    parser.add_argument(
+        "--max_new_tokens",
+        type=int,
+        default=8192,
+        help="Maximum number of new tokens to generate."
+    )
+    parser.add_argument(
+        "--temperature",
+        type=float,
+        default=0.0,
+        help="The temperature we use for model generation.",
+    )
+    parser.add_argument(
+        "--batch_size", 
+        type=int, 
+        default=1, 
+        help="Batch size for generation."
+    )
+    parser.add_argument(
+        "--load_in_8bit",
+        action="store_true",
+        help="Load model in 8bit mode, which will reduce memory and speed up inference.",
+    )
+    parser.add_argument(
+        "--gptq",
+        action="store_true",
+        help="If given, we're evaluating a 4-bit quantized GPTQ model.",
+    )
+    parser.add_argument(
+        "--use_chat_format", 
+        action="store_true", 
+        help="If given, we will use the chat format for the prompts."
+    )
+    parser.add_argument(
+        "--chat_formatting_function", 
+        type=str, 
+        default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
+        help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
+    )
+    parser.add_argument(
+        "--add_generation_prompt",
+        action="store_true",
+        help="If given, add beginning of prompt tokens when applying chat format."
+    )
 
     args = parser.parse_args()
     

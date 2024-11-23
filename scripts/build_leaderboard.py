@@ -10,6 +10,38 @@ from itertools import combinations
 import seaborn as sns
 import matplotlib.pyplot as plt
 import pandas as pd
+from tqdm import tqdm
+
+def bootstrap(data, num_resamples=5000, statistic=np.mean, seed=None):
+    """
+    Perform bootstrap resampling on a list of scores.
+
+    Parameters:
+    - data (list or array): The data to bootstrap (e.g., list of scores).
+    - num_resamples (int): The number of bootstrap samples to generate.
+    - statistic (function): The statistic to compute on each resample (e.g., np.mean, np.median).
+    - seed (int or None): Seed for the random number generator (optional).
+
+    Returns:
+    - bootstrapped_stats (array): An array of the computed statistic for each bootstrap sample.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    data = np.array(data)
+    bootstrapped_stats = []
+
+    for _ in range(num_resamples):
+        # Resample with replacement
+        sample = np.random.choice(data, size=len(data), replace=True)
+        # Compute the statistic on the resample
+        bootstrapped_stat = statistic(sample)
+        bootstrapped_stats.append(bootstrapped_stat)
+
+    lower_bound = np.percentile(bootstrapped_stats, 2.5)
+    upper_bound = np.percentile(bootstrapped_stats, 97.5)
+    return np.array(bootstrapped_stats), lower_bound, upper_bound
+
 
 # compute pvalue of the t-test between 
 def get_pvalue_from_paired_t_test(annotation1, annotation2):
@@ -19,6 +51,10 @@ def get_pvalue_from_paired_t_test(annotation1, annotation2):
 # test if significant
 def decide_is_distinguishable(annotation1, annotation2):
     return get_pvalue_from_paired_t_test(annotation1, annotation2) <= 0.05
+
+
+def decide_is_distinguishable(ci1, ci2):
+    return ci1[3] > ci2[2] or ci1[2] < ci2[3]
 
 
 # create a p-values v.s. data size plot 
@@ -60,6 +96,12 @@ def generate_ttest_plot(annotations, save_path, interval=100, percentile=90):
     plt.savefig(save_path)
 
 
+def calculate_win_rate(annotations):
+    win_annotations = [cur_a in [2.0] for cur_a in annotations]
+    tie_annotations = [cur_a in [0.0] for cur_a in annotations]
+    return sum(win_annotations) / len(win_annotations) + sum(tie_annotations) / len(tie_annotations) / 2
+
+
 def main(args):
     random.seed(42)
     nr_category = args.nr_category
@@ -77,19 +119,24 @@ def main(args):
     # read annotations
     positive_rates = defaultdict(list)
     annotations = defaultdict(list)
-    for model in models:
+    # confidence_interval=defaultdict(list)
+    for model in tqdm(models):
         for category in nr_category:
             category_name = category.lower().replace(' ', '_')
             cur_annotations = json.load(open(os.path.join(result_dir, model, category_name, annotator, "annotations.json"), 'r'))
             cur_annotations = [cur_a['preference'] for cur_a in cur_annotations]
-            positive_annotations = [cur_a in [2.0, 0.0] for cur_a in cur_annotations]
-            positive_rates[model].append(sum(positive_annotations) / len(positive_annotations))
+            positive_rate = calculate_win_rate(cur_annotations)
+            positive_rates[model].append(positive_rate)
+            # _, lower, upper = bootstrap(cur_annotations, statistic=calculate_win_rate)
+            # confidence_interval[model].append((upper-positive_rate, lower-positive_rate, upper, lower))
             cur_annotations = [cur_a if cur_a is not None else -1 for cur_a in cur_annotations]
             annotations[model].append(cur_annotations)
 
-        average_positive_rate = np.mean(positive_rates[model])
         model_annotations = [a for cat_annotations in annotations[model] for a in cat_annotations]
+        average_positive_rate = calculate_win_rate(model_annotations)
         positive_rates[model].append(average_positive_rate)
+        # _, lower, upper = bootstrap(model_annotations, statistic=calculate_win_rate)
+        # confidence_interval[model].append((upper-average_positive_rate, lower-average_positive_rate, upper, lower))
         annotations[model].append(model_annotations)
 
     # calculate ranking
@@ -117,82 +164,109 @@ def main(args):
                     break
             i += 1 + newly_added
 
+    # rankings = defaultdict(list)
+    # for cat_index, cat in enumerate((nr_category + ["Average"])):
+    #     # sort data by average
+    #     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
+    #     sorted_ci = [[m] + confidence_interval[m] for m in sorted_positive_rates]
+
+    #     # decide distinguishibility ranking
+    #     i = 0
+    #     while i < len(sorted_ci):
+    #         model_name = sorted_ci[i][0]
+    #         cur_confidence_interval = sorted_ci[i][cat_index+1]
+    #         # decide if the following model is distinguishable from the current
+    #         rankings[model_name].append(i+1)
+    #         newly_added = 0
+    #         for j in range(i + 1, len(sorted_ci), 1):
+    #             next_model_name = sorted_ci[j][0]
+    #             next_confidence_interval = sorted_ci[j][cat_index+1]
+    #             if not decide_is_distinguishable(cur_confidence_interval, next_confidence_interval):
+    #                 rankings[next_model_name].append(i+1)
+    #                 newly_added += 1
+    #             else:
+    #                 break
+    #         i += 1 + newly_added
+
     # add rankings and sort by average finally
     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
     sorted_results = [[m] + rates + rankings[m] for m, rates in sorted_positive_rates.items()]
+
+    print(json.dumps(sorted_results, indent=4))
 
     # write to the files
     for row in sorted_results:
         leaderboard_csv.writerow(row)
 
-    # output a p-value plot
-    generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
-                        os.path.join(args.save_dir, "p-value_plot.png"))
+    # # output a p-value plot
+    # generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
+    #                     os.path.join(args.save_dir, "p-value_plot.png"))
     
-    # Latex code
-    int_to_letter = {
-        '0': 'a', '1': 'b', '2': 'c', '3': 'd', '4': 'e',
-        '5': 'f', '6': 'g', '7': 'h', '8': 'i', '9': 'j'
-    }
-    import re
-    SUFFIX = {
-        "Brainstorm": "b",         
-        "Generation": "g",         
-        "Rewrite": "r",                  
-        "Open QA": "oq",                  
-        "Classify": "c",
-        "Summarize": "s",
-        "Extract": "e",
-        "Closed QA": "cq",
-        'Fact Checking or Attributed QA': "f",
-        'Multi-Document Synthesis': "m",
-        'Reasoning Over Numerical Data': "ro",
-        "Micro Average": "o",
-        "Ranking": "rk" 
-    }
+    # # Latex code
+    # int_to_letter = {
+    #     '0': 'a', '1': 'b', '2': 'c', '3': 'd', '4': 'e',
+    #     '5': 'f', '6': 'g', '7': 'h', '8': 'i', '9': 'j'
+    # }
+    # import re
+    # SUFFIX = {
+    #     "Brainstorm": "b",         
+    #     "Generation": "g",         
+    #     "Rewrite": "r",                  
+    #     "Open QA": "oq",                  
+    #     "Classify": "c",
+    #     "Summarize": "s",
+    #     "Extract": "e",
+    #     "Closed QA": "cq",
+    #     'Fact Checking or Attributed QA': "f",
+    #     'Multi-Document Synthesis': "m",
+    #     'Reasoning Over Numerical Data': "ro",
+    #     "Micro Average": "o",
+    #     "Ranking": "rk" 
+    # }
 
-    split = "dev"
+    # # split = "dev"
+    # # split = "test"
 
-    all_commands = []
-    table_row = []
-    for model in sorted_positive_rates:
-        # Generate Overleaf
-        overall_outputs = {} 
-        for i, category in enumerate(nr_category):
-            overall_outputs[category] = positive_rates[model][i]
+    # all_commands = []
+    # table_row = []
+    # for model in sorted_positive_rates:
+    #     # Generate Overleaf
+    #     overall_outputs = {} 
+    #     for i, category in enumerate(nr_category):
+    #         overall_outputs[category] = positive_rates[model][i]
 
-        overall_outputs["Micro Average"] = positive_rates[model][-1]
-        overall_outputs["Ranking"] = rankings[model][-1]
-        model_prefix = model.split("-t=")[0].replace('-','').replace("_", '').lower()
-        model_prefix = ''.join(int_to_letter[char] if char in int_to_letter else char for char in model_prefix)
-        model_prefix = re.sub(r'[\d\.]', '', model_prefix)
+    #     overall_outputs["Micro Average"] = positive_rates[model][-1]
+    #     overall_outputs["Ranking"] = rankings[model][-1]
+    #     model_prefix = model.split("-t=")[0].replace('-','').replace("_", '').lower()
+    #     model_prefix = ''.join(int_to_letter[char] if char in int_to_letter else char for char in model_prefix)
+    #     model_prefix = re.sub(r'[\d\.]', '', model_prefix)
         
-        command_template = "\\newcommand{\cmd}{num}"
-        categorical_commands = []
-        for category, num in overall_outputs.items():
-            if type(num) != int:
-                num = str(round(num * 100, 1))
-            else:
-                num = str(num)
-                # continue
-            categorical_command = model_prefix + SUFFIX[category] + ("d" if split == "dev" else "") 
-            all_commands.append(command_template.replace('cmd', categorical_command).replace('num', num))
-            categorical_commands.append(categorical_command)
+    #     command_template = "\\newcommand{\cmd}{num}"
+    #     categorical_commands = []
+    #     for category, num in overall_outputs.items():
+    #         if type(num) != int:
+    #             num = str(round(num * 100, 1))
+    #         else:
+    #             num = str(num)
+    #             # continue
+    #         categorical_command = model_prefix + SUFFIX[category] + ("d" if split == "dev" else "") 
+    #         all_commands.append(command_template.replace('cmd', categorical_command).replace('num', num))
+    #         categorical_commands.append(categorical_command)
         
-        row_string = model.split("-t=")[0] + f"({overall_outputs['Ranking']})"
-        for i, cmd in enumerate(categorical_commands):
-            if i == len(categorical_commands) - 1:
-                break
-            row_string += f" & \{cmd}"
-        row_string += " \\\\"
-        table_row.append(row_string)
+    #     row_string = model.split("-t=")[0] + f"({overall_outputs['Ranking']})"
+    #     for i, cmd in enumerate(categorical_commands):
+    #         if i == len(categorical_commands) - 1:
+    #             break
+    #         row_string += f" & \{cmd}"
+    #     row_string += " \\\\"
+    #     table_row.append(row_string)
 
 
-    for cmd in all_commands:
-        print(cmd)
+    # for cmd in all_commands:
+    #     print(cmd)
 
-    for row in table_row:
-        print(row)
+    # for row in table_row:
+    #     print(row)
 
 
 if __name__ == "__main__":

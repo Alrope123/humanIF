@@ -6,7 +6,7 @@ import random
 from collections import defaultdict
 import datasets
 from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
+from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT, ANNOTATION_REVERSE_MAP
 import href.evaluation.evaluators as annotator_funcs
 from collections import Counter
 
@@ -58,14 +58,6 @@ def leave_one_out_agreement_outer(annotations, my_p):
     
     # Return the accuracy (agreement rate) for this set of annotations
     return correct_predictions / num_annotations
-
-def LOO_agreement(human_prefs, my_p):
-    accs = []
-    for i, _ in enumerate(human_prefs):
-        for j, pref2 in enumerate(human_prefs):
-            if i != j:
-                accs.append(my_p == pref2)
-    return sum(accs) / len(accs)
 
 
 def annotate_based_on_perplexity(responses_a, responses_b, human_references):
@@ -184,7 +176,7 @@ def evaluate(args):
         cur_annotations = json.load(open(os.path.join(output_path, args.annotator, "annotations.json"), 'r'))
         prompt_to_annotation = {}
         for a in cur_annotations:
-            prompt_to_annotation[a["instruction"], a["generator_2"], a["generator_1"]] = int(a["preference"]) \
+            prompt_to_annotation[a["instruction"], a["generator_2"], a["generator_1"]] = ANNOTATION_REVERSE_MAP[int(a["preference"])] \
                 if a["preference"] != None else -1 
         rates_inner = []
         rates_outer = []

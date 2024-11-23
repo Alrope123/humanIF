@@ -10,9 +10,8 @@ from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
 import href.evaluation.evaluators as annotator_funcs
 
 def evaluate(args):
-    assert (args.model_name_or_path is not None) or (args.openai_engine is not None), "Either model_name_or_path or openai_engine should be specified."
-    model_name = (os.path.basename(os.path.normpath(args.model_name_or_path)) if args.model_name_or_path is not None \
-        else args.openai_engine)  
+    assert args.model_name is not None, "Model name should be specified."
+    model_name = args.model_name
 
     # generate the model response if haven't
     if args.response_dir is None:
@@ -36,8 +35,7 @@ def evaluate(args):
     else: # load from huggingface
         href_data = datasets.load_dataset(args.dataset)[args.split]
     baseline_responses = defaultdict(list)
-    if args.use_human_reference:
-        human_references = defaultdict(list)  # category -> list of example dicts
+    human_references = defaultdict(list)  # category -> list of example dicts
     for example in href_data:
         category = example['category']
         if args.nr_category and category not in args.nr_category:
@@ -45,16 +43,15 @@ def evaluate(args):
         baseline_responses[category].append({
             "instruction": example['instruction'],
             "output": example['output'],
-            "generator": "Meta-Llama-3.1-405B-Instruct-fp8",
+            "generator": "Meta-Llama-3.1-70B-Instruct",
             "dataset": f"href_{category}"
         })
-        if args.use_human_reference:
-            human_references[category].append({
-                "instruction": example['instruction'],
-                "output": example['reference'],
-                "generator": "human",
-                "dataset": f"href_{category}"
-            })
+        human_references[category].append({
+            "instruction": example['instruction'],
+            "output": example['reference'],
+            "generator": "human",
+            "dataset": f"href_{category}"
+        })
 
     # specify the annotator for each category
     if args.annotator in ANNOTATOR_SUITE_DICT: # using different annotators for different category
@@ -69,7 +66,7 @@ def evaluate(args):
                                 for category in args.nr_category}
 
     # running evaluation through AlpacaEval
-    results = {}
+    results = {"Average": {"wins": [], "ties": []}}
     for category in args.nr_category:
         annotator = category_to_annotator[category]['annotator']
         use_human_reference = category_to_annotator[category]['use_human_ref']
@@ -84,7 +81,12 @@ def evaluate(args):
         output_path = os.path.join(args.save_dir, model_name, category.lower().replace(" ", "_"))
         os.makedirs(output_path, exist_ok=True)
 
-        if annotator in DEFINED_ANNOTATORS: # non-llm annotators
+        
+        if annotator == "perplexity":
+            assert args.perplexity_path is not None, "Needs to specify a perplexity dir"
+            evaluate_func = getattr(annotator_funcs, annotator)
+            evaluate_func(category_baseline_responses, category_model_responses, category_human_references, category, args)
+        elif annotator in DEFINED_ANNOTATORS: # non-llm annotators
             # run the according evaluation function
             evaluate_func = getattr(annotator_funcs, annotator)
             cur_annotations = evaluate_func(category_baseline_responses, category_model_responses, category_human_references, args)
@@ -114,12 +116,19 @@ def evaluate(args):
             os.makedirs(os.path.join(output_path, args.annotator), exist_ok=True)
             json.dump(cur_annotations, open(os.path.join(output_path, args.annotator, "annotations.json"), 'w'))
         
-        # summarize result 
-        positive_annotations = [cur_a['preference'] in [2.0, 0.0] for cur_a in cur_annotations]
-        score = sum(positive_annotations) / len(positive_annotations)
-        results[category] = score
+        # record result 
+        results[category] = {
+            "wins": [cur_a['preference'] == 2.0 for cur_a in cur_annotations],
+            "ties": [cur_a['preference'] == 0.0 for cur_a in cur_annotations]
+        }
+        results["Average"]["wins"].extends([cur_a['preference'] == 2.0 for cur_a in cur_annotations])
+        results["Average"]["ties"].extends([cur_a['preference'] == 0.0 for cur_a in cur_annotations])
     
-    results["Average"] = sum(results.values()) / len(results)
+    for c, result in results:
+        for t, annotations in result.items():
+            result[t] = sum(annotations) / len(annotations)
+        results[c] = result["wins"] + result["ties"] / 2 
+
     json.dump(results, open(os.path.join(args.save_dir, model_name, f"results_{args.annotator}.json"), 'w'))
     for category, score in results.items():
         logging.info(f"{category}: {score * 100 :.1f}")
@@ -135,16 +144,22 @@ def main():
         help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
     )
     parser.add_argument(
-        "--model_name_or_path",
-        type=str,
+        "--perplexity_dir",
+        type=str, 
         default=None,
-        help="The huggingface model name or the path to a local directory that contains the model to use for evaluation.",
+        help="The directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation."
     )
     parser.add_argument(
-        "--openai_engine",
+        "--model_name",
         type=str,
         default=None,
-        help="If specified, we will use the OpenAI API to generate the predictions.",
+        help="The model name that corresponds to the name of the yaml configuration file under `generation_config_dir` (exclude `.yaml`).",
+    )
+    parser.add_argument(
+        "--generation_config_dir",
+        type=str,
+        default="href/generation/configs_mine-t=0.0",
+        help="The directory that contains the model generation configuration files.",
     )
     parser.add_argument(
         "--dataset",
@@ -201,67 +216,6 @@ def main():
         "--use_human_reference",
         action="store_true",
         help="Whether of not annotator needs to use the human reference. No need to specify if annotator specifies a evaluator suite."
-    )
-    # generation arguments
-    parser.add_argument(
-        "--use_vllm",
-        action="store_true",
-        help="If given, we will use vLLM to generate the predictions - much faster.",
-    )
-    parser.add_argument(
-        "--tokenizer_name_or_path",
-        type=str,
-        default=None,
-        help="The huggingface tokenizer name or the path to a local directory that contains the tokenizer to use for evaluation. If not specified, we will use the same ones as `model_name_or_path`.",
-    )
-    parser.add_argument(
-        "--use_slow_tokenizer",
-        action="store_true",
-        help="If given, we will use the slow tokenizer."
-    )
-    parser.add_argument(
-        "--max_new_tokens",
-        type=int,
-        default=8192,
-        help="Maximum number of new tokens to generate."
-    )
-    parser.add_argument(
-        "--temperature",
-        type=float,
-        default=0.0,
-        help="The temperature we use for model generation.",
-    )
-    parser.add_argument(
-        "--batch_size", 
-        type=int, 
-        default=1, 
-        help="Batch size for generation."
-    )
-    parser.add_argument(
-        "--load_in_8bit",
-        action="store_true",
-        help="Load model in 8bit mode, which will reduce memory and speed up inference.",
-    )
-    parser.add_argument(
-        "--gptq",
-        action="store_true",
-        help="If given, we're evaluating a 4-bit quantized GPTQ model.",
-    )
-    parser.add_argument(
-        "--use_chat_format", 
-        action="store_true", 
-        help="If given, we will use the chat format for the prompts."
-    )
-    parser.add_argument(
-        "--chat_formatting_function", 
-        type=str, 
-        default="href.generation.templates.create_prompt_with_huggingface_tokenizer_template", 
-        help="The name of the function to use to create the chat format. This function will be dynamically imported. Functions are specified in generation/templates.py."
-    )
-    parser.add_argument(
-        "--add_generation_prompt",
-        action="store_true",
-        help="If given, add beginning of prompt tokens when applying chat format."
     )
 
     args = parser.parse_args()

@@ -1,14 +1,145 @@
 import os
 import json
 import argparse
-import logging
+import numpy as np
 import random
 from collections import defaultdict
 import datasets
-from alpaca_eval import evaluate as alpaca_farm_evaluate
-from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
-import href.evaluation.evaluators as annotator_funcs
+# from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
 from collections import Counter
+import pandas as pd
+
+ANNOTATION_REVERSE_MAP = {
+    1: 2,
+    2: 1,
+    0: 0
+}
+
+
+ANNOTATOR_SUITE_DICT = {
+    "ahref": {
+        "Brainstorm": {
+            "annotator": "llama3.1-70b_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Open QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Closed QA": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Extract": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Generation": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Rewrite": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Summarize": {
+            "annotator": "llama3.1-70b_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Classify": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Fact Checking or Attributed QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Multi-Document Synthesis": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Reasoning Over Numerical Data": {
+            "annotator": "llama3.1-70b_basic_w_reference",
+            "use_human_ref": True,
+        },
+    },
+    "ahref_7b": {
+        "Brainstorm": {
+            "annotator": "llama3.1_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Open QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Closed QA": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Extract": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Generation": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Rewrite": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Summarize": {
+            "annotator": "llama3.1_basic_no_reference",
+            "use_human_ref": False,
+        },
+        "Classify": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+        "Fact Checking or Attributed QA": {
+            "annotator": "bertscore",
+            "use_human_ref": True,
+        },
+        "Multi-Document Synthesis": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        }, 
+        "Reasoning Over Numerical Data": {
+            "annotator": "llama3.1_basic_w_reference",
+            "use_human_ref": True,
+        },
+    },
+}
+
+def bootstrap(data, num_resamples=5000, statistic=np.mean, seed=None):
+    """
+    Perform bootstrap resampling on a list of scores.
+
+    Parameters:
+    - data (list or array): The data to bootstrap (e.g., list of scores).
+    - num_resamples (int): The number of bootstrap samples to generate.
+    - statistic (function): The statistic to compute on each resample (e.g., np.mean, np.median).
+    - seed (int or None): Seed for the random number generator (optional).
+
+    Returns:
+    - bootstrapped_stats (array): An array of the computed statistic for each bootstrap sample.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    data = np.array(data)
+    bootstrapped_stats = []
+
+    for _ in range(num_resamples):
+        # Resample with replacement
+        sample = np.random.choice(data, size=len(data), replace=True)
+        # Compute the statistic on the resample
+        bootstrapped_stat = statistic(sample)
+        bootstrapped_stats.append(bootstrapped_stat)
+
+    lower_bound = np.percentile(bootstrapped_stats, 2.5)
+    upper_bound = np.percentile(bootstrapped_stats, 97.5)
+    return np.array(bootstrapped_stats), lower_bound, upper_bound
 
 
 def calculate_mode(annotations):
@@ -59,14 +190,6 @@ def leave_one_out_agreement_outer(annotations, my_p):
     # Return the accuracy (agreement rate) for this set of annotations
     return correct_predictions / num_annotations
 
-def LOO_agreement(human_prefs, my_p):
-    accs = []
-    for i, _ in enumerate(human_prefs):
-        for j, pref2 in enumerate(human_prefs):
-            if i != j:
-                accs.append(my_p == pref2)
-    return sum(accs) / len(accs)
-
 
 def annotate_based_on_perplexity(responses_a, responses_b, human_references):
     annotations = []
@@ -90,7 +213,6 @@ def annotate_based_on_perplexity(responses_a, responses_b, human_references):
 
 
 def evaluate(args):
-    assert args.annotator is not None and args.config_dir is not None, "Please specify the configuration of the annotator."
 
     # load model responses
     href_data = datasets.load_dataset(args.dataset)[args.split]
@@ -101,103 +223,61 @@ def evaluate(args):
             continue
         data[category].append(example)
 
-    # specify the annotator for each category
-    if args.annotator in ANNOTATOR_SUITE_DICT: # using different annotators for different category
+    annotators = args.annotators
+    results = {"annotator": [], "average": [], "confidence_interval": []}
+    results.update({c : [] for c in args.nr_category})
+    # getting results from each annotator
+    for annotator in annotators:
+        results["annotator"].append(annotator)
+        # specify the annotator for each category
+        if annotator in ANNOTATOR_SUITE_DICT: # using different annotators for different category
+            for category in args.nr_category:
+                assert category in ANNOTATOR_SUITE_DICT[annotator], \
+                f"Category {category} does not have an assigned annotator by {annotator}."
+            category_to_annotator = ANNOTATOR_SUITE_DICT[annotator]
+        else: # one single annotator for all categories
+            category_to_annotator = {category: {'annotator': annotator} for category in args.nr_category}
+
+        rates_total = []
         for category in args.nr_category:
-            assert category in ANNOTATOR_SUITE_DICT[args.annotator], \
-            f"Category {category} does not have an assigned annotator by {args.annotator}."
-        category_to_annotator = ANNOTATOR_SUITE_DICT[args.annotator]
-    else: # one single annotator for all categories
-        category_to_annotator = {category: {
-                                    'annotator': args.annotator, 
-                                    'use_human_ref': args.use_human_reference} 
-                                for category in args.nr_category}
+            annotator = category_to_annotator[category]['annotator']
 
-    # running evaluation through AlpacaEval
-    for category in args.nr_category:
-        annotator = category_to_annotator[category]['annotator']
-        use_human_reference = category_to_annotator[category]['use_human_ref']
-
-        category_responses_a = [{
-            "instruction": dp['instruction'],
-            "output": dp['output_a'],
-            "generator": dp['generator_a'],
-            # "perplexity": dp['perplexity_a'],
-            "dataset": f"href_{category}"
-        } for dp in data[category]]
-        category_responses_b = [{
-            "instruction": dp['instruction'],
-            "output": dp['output_b'],
-            "generator": dp['generator_b'],
-            # "perplexity": dp['perplexity_b'],
-            "dataset": f"href_{category}"
-        } for dp in data[category]]
-        if use_human_reference:
-            category_human_references = [{
-                "instruction": dp['instruction'],
-                "output": dp['reference'],
-                "generator": "human",
-                "dataset": f"href_{category}"
-            } for dp in data[category]]
-        else:
-            category_human_references = None
-        logging.info(f"Running evaluation on category: {category}")
-        output_path = os.path.join(args.save_dir, "human_agreement_analysis", category.lower().replace(" ", "_"))
-        os.makedirs(output_path, exist_ok=True)        
-
-        if annotator == "perplexity":
-            cur_annotations = annotate_based_on_perplexity(category_responses_b, category_responses_a, category_human_references)
-            os.makedirs(os.path.join(output_path, annotator), exist_ok=True)
-            json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w')) 
-        elif annotator in DEFINED_ANNOTATORS: # non-llm annotators
-            # run the according evaluation function
-            evaluate_func = getattr(annotator_funcs, annotator)
-            cur_annotations = evaluate_func(category_responses_b, category_responses_a, category_human_references, args)
-            os.makedirs(os.path.join(args.save_dir, "human_agreement_analysis", annotator, category.lower().replace(" ", "_")), exist_ok=True)
-            json.dump(cur_annotations, open(os.path.join(output_path, annotator, "annotations.json"), 'w'))
-        else: # llm annotators
-            cache_dir = os.path.join(args.cache_dir, "human_agreement_analysis", category.lower().replace(" ", "_"))
-            os.makedirs(cache_dir, exist_ok=True)
-            alpaca_farm_evaluate(
-                model_outputs=category_responses_a,
-                reference_outputs=category_responses_b,
-                human_outputs=category_human_references,
-                annotators_config=annotator,
-                output_path=output_path,
-                is_return_instead_of_print=True,
-                caching_path=os.path.join(cache_dir, f"{annotator}.json"),
-                precomputed_leaderboard=None,
-                is_cache_leaderboard=False,
-                base_dir=args.config_dir,
-                seed=args.seed,
-                output_keys=("output_1", "output_2", "output_human") if use_human_reference else ("output_1", "output_2")
-            )
+            output_path = os.path.join(args.result_dir, category.lower().replace(" ", "_"))
             cur_annotations = json.load(open(os.path.join(output_path, annotator, "annotations.json"), 'r'))
+
+            prompt_to_annotation = {}
+            for a in cur_annotations:
+                prompt_to_annotation[a["instruction"], a["generator_2"], a["generator_1"]] = ANNOTATION_REVERSE_MAP[int(a["preference"])] \
+                    if a["preference"] != None else -1
+            rates_outer = []
+            for dp in data[category]:
+                rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['generator_a'], dp['generator_b']]))
+            results[category].append(sum(rates_outer) / len(rates_outer))
+            rates_total.extend(rates_outer)
         
-        # we combined the results if coming from different basic annotators
-        if annotator != args.annotator: 
-            os.makedirs(os.path.join(output_path, args.annotator), exist_ok=True)
-            json.dump(cur_annotations, open(os.path.join(output_path, args.annotator, "annotations.json"), 'w'))
+        results['average'].append(sum(rates_total) / len(rates_total))
+        _, upper, lower = bootstrap(rates_total)
+        results['confidence_interval'].append(f"{lower:.2f}<{sum(rates_total) / len(rates_total):.2f} <{upper:.2f}")
 
 
-        # calculate agreement with human
-        cur_annotations = json.load(open(os.path.join(output_path, args.annotator, "annotations.json"), 'r'))
-        prompt_to_annotation = {}
-        for a in cur_annotations:
-            prompt_to_annotation[a["instruction"], a["generator_2"], a["generator_1"]] = int(a["preference"]) \
-                if a["preference"] != None else -1 
+    # Calculate human statistics
+    results["annotator"].append("human")
+    rates_total = []
+    for category in args.nr_category:
         rates_inner = []
-        rates_outer = []
         for dp in data[category]:
             rates_inner.append(leave_one_out_agreement_inner(dp['annotations']))
-            rates_outer.append(leave_one_out_agreement_outer(dp['annotations'], prompt_to_annotation[dp['instruction'], dp['generator_a'], dp['generator_b']]))
-        agreement_rate_inner = sum(rates_inner) / len(rates_inner)
-        agreement_rate_outer = sum(rates_outer) / len(rates_outer)
-        logging.info(f"Category: {category}")
-        logging.info(f"Inner human agreement rate: {agreement_rate_inner * 100 : .1f}%")
-        logging.info(f"Human agreement rate using {args.annotator}: {agreement_rate_outer * 100 : .1f}%")
-        
+        results[category].append(sum(rates_inner) / len(rates_inner))
+        rates_total.extend(rates_inner)
+
+    results['average'].append(sum(rates_total) / len(rates_total))
+    _, upper, lower = bootstrap(rates_total)
+    results['confidence_interval'].append(f"{lower:.2f}<{sum(rates_total) / len(rates_total):.2f} <{upper:.2f}")
     
+    results = pd.DataFrame(results)
+    results.to_csv("human_agreement_analysis_results.csv", sep=",")
+
+
 def main():
     parser = argparse.ArgumentParser()
     # general arguments
@@ -229,41 +309,30 @@ def main():
         help="Random seed."
     )
     parser.add_argument(
-        "--save_dir",
+        "--result_dir",
         type=str, 
         default="results",
         help="Directory to save all results"
     )
     parser.add_argument(
-        "--cache_dir",
-        type=str,
-        default="cache",
-        help="The directory to store downloaded datasets, models, and intermmediate annotation files.",
+        "--save_dir",
+        type=str, 
+        default="results_old",
+        help="Directory to save all results"
     )
     # evaluation arguments
     parser.add_argument(
-        "--annotator",
+        "--annotators",
         type=str,
         default="ahref",
-        help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
-    )
-    parser.add_argument(
-        "--config_dir",
-        type=str,
-        default="href/llm_as_a_judge/configs",
-        help="The directory to contain configures for llm_as_a_judge evaluators",
-    )
-    parser.add_argument(
-        "--use_human_reference",
-        action="store_true",
-        help="Whether of not annotator needs to use the human reference. No need to specify if annotator specifies a evaluator suite."
+        nargs="+",
+        help="Names of the evaluation methods. Each has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )
 
     args = parser.parse_args()
     
     # set up
     random.seed(args.seed)
-    os.environ['HF_HOME'] = args.cache_dir
 
     evaluate(args)
 

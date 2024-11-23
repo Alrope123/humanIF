@@ -6,3 +6,4 @@ href.egg-info
 beaker_configs/auto_created
 commands*.sh
 logs
+cache

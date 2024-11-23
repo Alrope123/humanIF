@@ -95,6 +95,12 @@ ANNOTATOR_SUITE_DICT = {
     },
 }
 
+ANNOTATION_REVERSE_MAP = {
+    1: 2,
+    2: 1,
+    0: 0
+}
+
 DEFINED_ANNOTATORS = ["short", "long", "random_no_tie", "bertscore", "rouge"]
 
 def bertscore(responses_1, responses_2, human_references, args):

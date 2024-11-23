@@ -9,6 +9,8 @@ import vllm
 import datasets
 import yaml
 import math
+from openai import OpenAI
+import time
 
 from href.generation.utils import generate_perplexities, create_prompt_with_huggingface_tokenizer_template, load_hf_lm, load_hf_tokenizer
 
@@ -68,18 +70,17 @@ def generate_loss(args):
             use_fast_tokenizer=not config['use_slow_tokenizer'],
         )
         if config['use_vllm']: # load vllm
-            vllm_model = vllm.LLM(
-                model=config['model_name_or_path'],
-                tokenizer=config['tokenizer_name_or_path'] if config['tokenizer_name_or_path'] is not None else config['model_name_or_path'],
-                tensor_parallel_size=torch.cuda.device_count(),
-                download_dir=f"{args.cache_dir}/models",
-                gpu_memory_utilization=0.85
-            )
-            sampling_params = vllm.SamplingParams(
-                temperature=config['temperature'],  # greedy decoding
-                max_tokens=1,
-                prompt_logprobs=1,
-            )
+            foundOpenAI = False
+            while(not foundOpenAI):
+                try:            
+                    openai_client = OpenAI(
+                        base_url="http://localhost:9898/v1",
+                    )
+                    foundOpenAI = True
+                except:
+                    wait_time = 120
+                    logging.warning(f"Waiting for the server to start, waiting for {wait_time}s...")
+                    wait(wait_time)
         else:
             model = load_hf_lm(
                 model_name_or_path=config['model_name_or_path'],
@@ -133,8 +134,23 @@ def generate_loss(args):
     # generate outputs
     if config['model_name_or_path'] is not None: # local model
         if config['use_vllm']:
-            logging.info(f"Using VLLM:{sampling_params}")
-            vllm_outputs = vllm_model.generate(prompts, sampling_params)
+            # logging.info(f"Using VLLM:{sampling_params}")
+            foundOpenAI = False
+            while(not foundOpenAI):
+                try:
+                    vllm_outputs = openai_client.completions.create(
+                        model=config['model_name_or_path'],
+                        prompt=prompts,
+                        max_tokens=0,
+                        echo=True,
+                        logprobs=1
+                    ).choices
+                    foundOpenAI = True
+                except:
+                    wait_time = 30
+                    logging.warning(f"Waiting for the server to start, waiting for {wait_time}s...")
+                    time.sleep(wait_time)
+            # assert False, vllm_outputs[0]
             prompt_ids_references = []
             for i in range(0, len(references), config['batch_size']):
                 prompt_ids_references.extend(tokenizer(references[i:i+config['batch_size']], padding="longest", 
@@ -142,16 +158,19 @@ def generate_loss(args):
             assert len(prompt_ids_references) == len(vllm_outputs)
             outputs = []
             for output, prompt_ids_reference in zip(vllm_outputs, prompt_ids_references):
-                prompt_ids = output.prompt_token_ids
+                prompt_ids_reference = [str(id) for id in prompt_ids_reference]
+                prompt_ids = [list(obj.keys())[0] for i, obj in enumerate(output.prompt_logprobs) if i > 0]
                 start_idx, end_idx = find_sublist_indices(prompt_ids, prompt_ids_reference)
-                prompt_logprobs = output.prompt_logprobs
-                prompt_logs = []
-                for i in range(start_idx, end_idx, 1):
-                    if i == 0:
-                        continue
-                    id = prompt_ids[i]
-                    assert id in prompt_logprobs[i], [i, id, prompt_logprobs[i+1]] 
-                    prompt_logs.append(prompt_logprobs[i][id].logprob)
+                # prompt_logprobs = output.prompt_logprobs
+                # prompt_logs = []
+                # for i in range(start_idx, end_idx, 1):
+                #     if i == 0:
+                #         continue
+                #     id = prompt_ids[i]
+                #     assert id in prompt_logprobs[i], [i, id, prompt_logprobs[i+1]] 
+                #     prompt_logs.append(prompt_logprobs[i][id].logprob)
+                prompt_logs = output.logprobs.token_logprobs[start_idx: end_idx]
+                # assert False, prompt_logs
                 outputs.append(math.exp(-sum(prompt_logs) / len(prompt_logs))) 
         else:
             outputs = generate_perplexities(
