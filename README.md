@@ -6,7 +6,7 @@
  
 
 ### Announcement
-* **11/07/2024**: We officially publish the paper [HREF paper](), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 
+* **11/07/2024**: 🌟We officially publish the paper [HREF paper](), along with this codebase, the [HREF leaderboard](), [the validaiton set](), and [the human agreement set]()! 🌟
 
 ### Citation
 ```
@@ -24,23 +24,28 @@ conda activate href
 pip install -e .
 ```
 
-## Quick Start
+## Quick Start 🏃 
 To evaluate a supported model on href validation set (See a list under `href/generation/configs`), run:
 ```bash
-href evaluate --model_name Llama-3.1-8B-Instruct --annotator ahref
+href evaluate \
+    --model_name Llama-3.1-8B-Instruct \
+    --annotator ahref
 ```
 
 
-## Evaluation on HREF
+## Evaluation on HREF 🔗
 ### Evaluate a supported model
 To evaluate a supported model (See a list under `href/generation/configs`) beginning from generating its output using a supported annotator, run:
 ```bash
-href evaluate --model_name Llama-3.1-8B-Instruct --annotator llama3.1-70b_basic_w_reference --use_human_reference
+href evaluate \
+    --model_name Llama-3.1-8B-Instruct \
+    --annotator llama3.1-70b_basic_w_reference \
+    --use_human_reference
 ```
 <details>
 <summary> General arguments </summary>
 
-- `--model_name`: the model name that corresponds to the name of the yaml configuration file under `generation_config_dir` (exclude `.yaml`).
+- `--model_name`❗: the model name that corresponds to the name of the yaml configuration file under `generation_config_dir` (exclude `.yaml`).
 - `--generation_config_dir`: the directory that contains the model generation configuration files.
 - `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Default to use the validation set of HREF.
 - `--split`: the split to use in `dataset`. Default to be `dev`.
@@ -53,9 +58,9 @@ href evaluate --model_name Llama-3.1-8B-Instruct --annotator llama3.1-70b_basic_
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
 - `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
-- `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
+- `--use_human_reference`❗: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
 
@@ -69,24 +74,27 @@ Create a generation configuration for your model (examples can be found under `g
 <details>
 <summary> Generation arguments </summary>
 
-- `model_name_or_path`: the huggingface model name or the path to a local directory that contains the model.
-- `tokenizer_name_or_path`: the huggingface tokenizer name or the path to a local directory that contains the tokenizer
+- `model_name_or_path`❗: the huggingface model name or the path to a local directory that contains the model.
+- `tokenizer_name_or_path`❗: the huggingface tokenizer name or the path to a local directory that contains the tokenizer
 - `use_vllm`: if given, we will use vLLM to generate the responses.
 - `use_slow_tokenizer`: if given, we will use the slow tokenizer.
 - `max_new_tokens`: maximum number of new tokens to generate.
-- `temperature`: the temperature we use for model generation.
+- `temperature`❗: the temperature we use for model generation.
 - `batch_size`: batch size for generation.
 - `load_in_8bit`: load model in 8bit mode, which will reduce memory and speed up inference.
 - `gptq`: if given, we're evaluating a 4-bit quantized GPTQ model.
-- `format`: a string that must contain the placeholder `{prompt}` will be applied to every input for the model generation; designed for applying chat format; will call the tokenizer's `apply_chat_template` if set to the string `default`; remove this paratmer if no template needed to be applied.
+- `format`❗: a string that must contain the placeholder `{prompt}` will be applied to every input for the model generation; designed for applying chat format; will call the tokenizer's `apply_chat_template` if set to the string `default`; remove this paratmer if no template needed to be applied.
 </details>
 
 Now run:
 ```bash
-href evaluate --model_name <your configuration file name> --annotator ahref --generation_config_dir < directory cotaining your file>
+href evaluate \
+    --model_name <your configuration file name> \
+    --annotator ahref \ 
+    --generation_config_dir < directory cotaining your file>
 ```
 
-#### Option 2: f you only have generated responses
+#### Option 2: if you only have generated responses
 1. Generate model responses to the `instruction` field of the data in your own way.
 2. Make sure to save responses in the following structure
 ```
@@ -102,9 +110,12 @@ href evaluate --model_name <your configuration file name> --annotator ahref --ge
 ```
 where each data point in responses.jsonl contains the fields: `instruction`, `output`, `generator`.
 
-3. Now run:
+3. Now run with `--response_dir` specified:
 ```bash
-href evaluate --model_name <any custom model name> --response_dir <your response directory> --annotator ahref 
+href evaluate \
+    --model_name <any custom model name> \
+    --response_dir <your response directory> \
+    --annotator ahref 
 ``` 
 
 #### Option 3: add an API model other than OpenAI
@@ -113,7 +124,9 @@ Please follow the logic how we implement OpenAI API in `href/generation/generate
 ### Build local leaderboard
 To build the leaderboard using the evaluation results, run:
 ```bash
-python scripts/build_leaderboard.py --models <model 1> <model 2> ... <model n>  --result_dir <path to directory that contains results>
+python scripts/build_leaderboard.py \
+    --models <model 1> <model 2> ... <model n> \
+    --result_dir <path to directory that contains results>
 ```
 <details>
 <summary> Full arguments </summary>
@@ -128,7 +141,7 @@ python scripts/build_leaderboard.py --models <model 1> <model 2> ... <model n>  
 
 
 
-### Submit to HREF Leaderboard
+### Submit to HREF Leaderboard 🚀
 To submit your custom model / change the configuration of your model to be evaluated on HREF's evaluation set and posted on the [leaderboard](), create a Github issue or directly email us at xxxATallenaiDOTorg with either:
 1. The model generation configuration you have created in Option 1 in **Evaluate a custom model**.
 1. A custom name and the responses you have created in Option 2 in **Evaluate a custom model**.
@@ -136,7 +149,9 @@ To submit your custom model / change the configuration of your model to be evalu
 ## Human Agreement Analysis
 To calculate the human agreement rate of an evaluation method on HREF human agreement set, run:
 ```bash
-href calculate_agreement --annotator llama3.1-70b_basic_w_reference --use_human_reference
+href calculate_agreement \
+    --annotator llama3.1-70b_basic_w_reference \
+    --use_human_reference
 ```
 <details>
 <summary> General arguments </summary>
@@ -152,9 +167,9 @@ href calculate_agreement --annotator llama3.1-70b_basic_w_reference --use_human_
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
 - `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
-- `--use_human_reference`: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
+- `--use_human_reference`❗: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
 
@@ -166,7 +181,9 @@ For this section, we give instructions on how to add a new evaluator `<new_evalu
 2. Add the name `<new_evaluator>` to `href.evaluation.evaluators.DEFINED_ANNOTATORS`.
 3. Run: 
 ```bash
-href calculate_agreement --annotator `<new_evaluator>` --use_human_reference
+href calculate_agreement \
+    --annotator <new_evaluator> \
+    --use_human_reference
 ```
 
 ### Add an LLM-based evaluator
@@ -186,13 +203,15 @@ To use llm_as_a_judge, we use a external package: a [modified version](https://g
 #### 3. Create the configuration file 
 To create the configuration file using the configurations from the previous two steps, run:
 ```bash
-href create_config --model_config_name <new_evaluator> --template_name <new_template> 
+href create_config \
+    --model_config_name <new_evaluator> \
+    --template_name <new_template> 
 ```
 <details>
 <summary> Required Arguments </summary>
 
-- `--model_config_name`: the name of the model configuration used as the judge defined in `href/llm_as_a_judge/model_settings.json`.
-- `--template_name`: the name of the template file in `href/llm_as_a_judge/prompt_templates` (without the suffix).
+- `--model_config_name`❗: the name of the model configuration used as the judge defined in `href/llm_as_a_judge/model_settings.json`.
+- `--template_name`❗: the name of the template file in `href/llm_as_a_judge/prompt_templates` (without the suffix).
 </details>
 
 <details>
@@ -205,7 +224,9 @@ href create_config --model_config_name <new_evaluator> --template_name <new_temp
 
 This will create a configuration directory with the name `<new_evaluator>_<new_template>` under `config_dir` (default to be `href/llm_as_a_judge/configs`), which contains a configuration yaml file and a resulting prompt template. Now run:
 ```bash
-href calculate_agreement --annotator `<new_evaluator>_<new_template>` --use_human_reference
+href calculate_agreement \
+    --annotator `<new_evaluator>_<new_template>` \
+    --use_human_reference
 ```
 ### Add an Evaluator suite
 To create a evaluator suite where different unit evaluators are used for different categories, append to `href/evaluation/evaluators.py/ANNOTATOR_SUITE_DICT` where you specify the unit annotator with `annotator` and whether each annotator uses human reference with `use_human_reference` for each category. Then run:
@@ -218,7 +239,9 @@ href calculate_agreement --annotator `<new_evaluator_suite>`
 ### Comparing Evaluators
 To compare the human agreement rates among different annotators, run:
 ```bash
-python scripts/compare_annotators.py --annotators <evaluator 1> <evaluator 2> ... <evaluator n>  --result_dir <path to directory that contains results>
+python scripts/compare_annotators.py \
+    --annotators <evaluator 1> <evaluator 2> ... <evaluator n>  \
+    --result_dir <path to directory that contains results>
 ```
 <details>
 <summary> Full arguments </summary>
