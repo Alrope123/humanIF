@@ -1,5 +1,5 @@
-model_name_or_path: allenai/OLMo-7B-SFT
-tokenizer_name_or_path: allenai/OLMo-7B-SFT
+model_name_or_path: allenai/OLMo-7B-0724-Instruct-hf
+tokenizer_name_or_path: allenai/OLMo-7B-0724-Instruct-hf
 use_vllm: true
 use_slow_tokenizer: false
 max_new_tokens: 8192
