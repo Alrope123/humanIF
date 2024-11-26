@@ -31,8 +31,8 @@ def find_sublist_indices(main_list, sublist):
     sublist_len = len(sublist)
     main_list_len = len(main_list)
     # Iterate through the main list to find the starting position of the sublist
-    for start_idx, end_idx in [(0, sublist_len), (1, sublist_len), (0, sublist_len-1), (1, sublist_len-1)]:
-        for i in range(main_list_len - sublist_len + 1):
+    for start_idx, end_idx in [(0, sublist_len), (1, sublist_len), (0, sublist_len-1), (1, sublist_len-1), (2, sublist_len), (2, sublist_len-1), (0, sublist_len-2), (1, sublist_len-2)]:
+        for i in range(main_list_len - end_idx + 1):
             if main_list[i:i + len(sublist[start_idx: end_idx])] == sublist[start_idx: end_idx]:
                 return i, i + len(sublist[start_idx: end_idx])
     # If the sublist is not found, return None
@@ -110,7 +110,7 @@ def generate_loss(args):
                     prompts.append(prompt)
                     references.append(reference)
                 else:
-                    prompts.append(config['format'].format(prompt=prompt))
+                    prompts.append(config['format'].format(prompt=prompt) + reference)
                     references.append(reference)
         else:
             prompts = []
@@ -142,7 +142,7 @@ def generate_loss(args):
                                     return_tensors="pt", truncation=True, add_special_tokens=False).input_ids.tolist())
             assert len(prompt_ids_references) == len(vllm_outputs)
             outputs = []
-            for output, prompt_ids_reference in zip(vllm_outputs, prompt_ids_references):
+            for j, (output, prompt_ids_reference) in enumerate(zip(vllm_outputs, prompt_ids_references)):
                 prompt_ids = output.prompt_token_ids
                 start_idx, end_idx = find_sublist_indices(prompt_ids, prompt_ids_reference)
                 prompt_logprobs = output.prompt_logprobs
@@ -151,8 +151,11 @@ def generate_loss(args):
                     if i == 0:
                         continue
                     id = prompt_ids[i]
-                    assert id in prompt_logprobs[i], [i, id, prompt_logprobs[i+1]] 
-                    prompt_logs.append(prompt_logprobs[i][id].logprob)
+                    if prompt_logprobs is None:
+                        prompt_logs.append(0)
+                    else:
+                        assert id in prompt_logprobs[i], [prompt_logprobs, i, id, prompt_logprobs[i+1]] 
+                        prompt_logs.append(prompt_logprobs[i][id].logprob)
                 outputs.append(math.exp(-sum(prompt_logs) / len(prompt_logs))) 
         else:
             outputs = generate_perplexities(

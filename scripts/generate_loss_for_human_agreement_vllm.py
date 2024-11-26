@@ -33,8 +33,8 @@ def find_sublist_indices(main_list, sublist):
     sublist_len = len(sublist)
     main_list_len = len(main_list)
     # Iterate through the main list to find the starting position of the sublist
-    for start_idx, end_idx in [(0, sublist_len), (1, sublist_len), (0, sublist_len-1), (1, sublist_len-1)]:
-        for i in range(main_list_len - sublist_len + 1):
+    for start_idx, end_idx in [(0, sublist_len), (1, sublist_len), (0, sublist_len-1), (1, sublist_len-1), (2, sublist_len), (2, sublist_len-1), (0, sublist_len-2), (1, sublist_len-2)]:
+        for i in range(main_list_len - end_idx + 1):
             if main_list[i:i + len(sublist[start_idx: end_idx])] == sublist[start_idx: end_idx]:
                 return i, i + len(sublist[start_idx: end_idx])
     # If the sublist is not found, return None

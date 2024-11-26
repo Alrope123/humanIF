@@ -7,4 +7,4 @@ temperature: 0.0
 batch_size: 1
 load_in_8bit: false
 gptq: false
-format: 'BEGINNING OF CONVERSATION: USER: {prompt} GPT:'
+format: 'BEGINNING OF CONVERSATION: USER: {prompt} GPT: '
