@@ -146,9 +146,7 @@ python scripts/build_leaderboard.py \
 
 
 ### Submit to HREF Leaderboard 🚀
-To submit your custom model / change the configuration of your model to be evaluated on HREF's evaluation set and posted on the [leaderboard](), create a Github issue or directly email us at xxxATallenaiDOTorg with either:
-1. The model generation configuration you have created in Option 1 in **Evaluate a custom model**.
-1. A custom name and the responses you have created in Option 2 in **Evaluate a custom model**.
+To submit your custom model / change the configuration of your model to be evaluated on HREF's evaluation set and posted on the [leaderboard](), create a Github issue or directly email us at xxxATallenaiDOTorg with either the model generation configuration you have created in Option 1 in **Evaluate a custom model**.
 
 ## Human Agreement Analysis
 To calculate the human agreement rate of an evaluation method on HREF human agreement set, run:
