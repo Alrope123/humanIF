@@ -171,13 +171,13 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="alrope/dev_test",
+        default="allenai/href",
         help="The huggingface dataset name or the path to a local file to use for evaluation."
     )
     parser.add_argument(
         "--split",
         type=str,
-        default="train",
+        default="dev",
         help="The split to use in dataset."
     )
     parser.add_argument(

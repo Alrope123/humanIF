@@ -5,7 +5,7 @@ import numpy as np
 import random
 from collections import defaultdict
 import datasets
-# from href.evaluation.evaluators import DEFINED_ANNOTATORS, ANNOTATOR_SUITE_DICT
+from href.evaluation.evaluators import ANNOTATOR_SUITE_DICT
 from collections import Counter
 import pandas as pd
 
@@ -15,101 +15,6 @@ ANNOTATION_REVERSE_MAP = {
     0: 0
 }
 
-
-ANNOTATOR_SUITE_DICT = {
-    "ahref": {
-        "Brainstorm": {
-            "annotator": "llama3.1-70b_basic_no_reference",
-            "use_human_ref": False,
-        },
-        "Open QA": {
-            "annotator": "bertscore",
-            "use_human_ref": True,
-        },
-        "Closed QA": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        }, 
-        "Extract": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Generation": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Rewrite": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Summarize": {
-            "annotator": "llama3.1-70b_basic_no_reference",
-            "use_human_ref": False,
-        },
-        "Classify": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Fact Checking or Attributed QA": {
-            "annotator": "bertscore",
-            "use_human_ref": True,
-        },
-        "Multi-Document Synthesis": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        }, 
-        "Reasoning Over Numerical Data": {
-            "annotator": "llama3.1-70b_basic_w_reference",
-            "use_human_ref": True,
-        },
-    },
-    "ahref_7b": {
-        "Brainstorm": {
-            "annotator": "llama3.1_basic_no_reference",
-            "use_human_ref": False,
-        },
-        "Open QA": {
-            "annotator": "bertscore",
-            "use_human_ref": True,
-        },
-        "Closed QA": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        }, 
-        "Extract": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Generation": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Rewrite": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Summarize": {
-            "annotator": "llama3.1_basic_no_reference",
-            "use_human_ref": False,
-        },
-        "Classify": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        },
-        "Fact Checking or Attributed QA": {
-            "annotator": "bertscore",
-            "use_human_ref": True,
-        },
-        "Multi-Document Synthesis": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        }, 
-        "Reasoning Over Numerical Data": {
-            "annotator": "llama3.1_basic_w_reference",
-            "use_human_ref": True,
-        },
-    },
-}
 
 def bootstrap(data, num_resamples=5000, statistic=np.mean, seed=None):
     """
@@ -284,13 +189,13 @@ def main():
     parser.add_argument(
         "--dataset",
         type=str,
-        default="alrope/test_human_agreement",
+        default="allenai/href_preference",
         help="The huggingface dataset name or the path to a local file to use for evaluation."
     )
     parser.add_argument(
         "--split",
         type=str,
-        default="train",
+        default="dev",
         help="The split to use in dataset."
     )
     parser.add_argument(
@@ -324,7 +229,7 @@ def main():
     parser.add_argument(
         "--annotators",
         type=str,
-        default="ahref",
+        default="href",
         nargs="+",
         help="Names of the evaluation methods. Each has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )

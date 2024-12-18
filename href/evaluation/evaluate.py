@@ -121,10 +121,10 @@ def evaluate(args):
             "wins": [cur_a['preference'] == 2.0 for cur_a in cur_annotations],
             "ties": [cur_a['preference'] == 0.0 for cur_a in cur_annotations]
         }
-        results["Average"]["wins"].extends([cur_a['preference'] == 2.0 for cur_a in cur_annotations])
-        results["Average"]["ties"].extends([cur_a['preference'] == 0.0 for cur_a in cur_annotations])
+        results["Average"]["wins"].extend([cur_a['preference'] == 2.0 for cur_a in cur_annotations])
+        results["Average"]["ties"].extend([cur_a['preference'] == 0.0 for cur_a in cur_annotations])
     
-    for c, result in results:
+    for c, result in results.items():
         for t, annotations in result.items():
             result[t] = sum(annotations) / len(annotations)
         results[c] = result["wins"] + result["ties"] / 2 
@@ -158,19 +158,19 @@ def main():
     parser.add_argument(
         "--generation_config_dir",
         type=str,
-        default="href/generation/configs_mine-t=0.0",
+        default="href/generation/configs",
         help="The directory that contains the model generation configuration files.",
     )
     parser.add_argument(
         "--dataset",
         type=str,
-        default="alrope/dev_test",
+        default="allenai/href",
         help="The huggingface dataset name or the path to a local file to use for evaluation."
     )
     parser.add_argument(
         "--split",
         type=str,
-        default="train",
+        default="dev",
         help="The split to use in dataset."
     )
     parser.add_argument(
@@ -203,7 +203,7 @@ def main():
     parser.add_argument(
         "--annotator",
         type=str,
-        default="ahref",
+        default="href",
         help="Name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in evaluation/evaluators.DEFINED_ANNOTATORS. 2. a configuration name for llm_as_a_judge that corresponds to a directory in llm_as_a_judge. 3. a suite of the above two types of unit evaluators defined in evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`."
     )
     parser.add_argument(

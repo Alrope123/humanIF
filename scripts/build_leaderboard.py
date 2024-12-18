@@ -58,7 +58,7 @@ def decide_is_distinguishable(ci1, ci2):
 
 
 # create a p-values v.s. data size plot 
-def generate_ttest_plot(annotations, save_path, interval=100, percentile=90):
+def generate_ttest_plot(annotations, save_path, interval=10, percentile=80):
     # randomly shuffle the annotations
     data_size = len(next(iter(annotations.values())))
     indices = list(range(data_size))
@@ -78,20 +78,22 @@ def generate_ttest_plot(annotations, save_path, interval=100, percentile=90):
         sizes.append(size)
 
     # plotting    
-    fontdict={'fontsize': 15}
+    plt.xticks(fontsize=16)
+    plt.yticks(fontsize=16)
+    fontdict={'fontsize': 16}
     
     data = pd.DataFrame({
         'x': sizes,
         'y': p_value_indicators
     })
     sns.set_theme(style="white")  # Optional: set the style of the plot
-    sns.lineplot(x='x', y='y', data=data, color="#66c2a5", label=f"{percentile}% Percentile")
+    sns.lineplot(x='x', y='y', data=data, color="#66c2a5", label=f"{percentile}% Percentile", linewidth=2.5)
     
     plt.axhline(y=0.05, color='grey', linestyle='--', linewidth=1.5, label='0.05')
     
     plt.xlabel("Size", fontdict=fontdict)
     plt.ylabel("P-Value", fontdict=fontdict)
-    plt.legend(prop={'size': 15})
+    plt.legend(prop={'size': 16})
 
     plt.savefig(save_path)
 
@@ -119,7 +121,7 @@ def main(args):
     # read annotations
     positive_rates = defaultdict(list)
     annotations = defaultdict(list)
-    # confidence_interval=defaultdict(list)
+    confidence_interval=defaultdict(list)
     for model in tqdm(models):
         for category in nr_category:
             category_name = category.lower().replace(' ', '_')
@@ -127,16 +129,16 @@ def main(args):
             cur_annotations = [cur_a['preference'] for cur_a in cur_annotations]
             positive_rate = calculate_win_rate(cur_annotations)
             positive_rates[model].append(positive_rate)
-            # _, lower, upper = bootstrap(cur_annotations, statistic=calculate_win_rate)
-            # confidence_interval[model].append((upper-positive_rate, lower-positive_rate, upper, lower))
+            _, lower, upper = bootstrap(cur_annotations, statistic=calculate_win_rate)
+            confidence_interval[model].append((upper-positive_rate, lower-positive_rate, upper, lower))
             cur_annotations = [cur_a if cur_a is not None else -1 for cur_a in cur_annotations]
             annotations[model].append(cur_annotations)
 
         model_annotations = [a for cat_annotations in annotations[model] for a in cat_annotations]
         average_positive_rate = calculate_win_rate(model_annotations)
         positive_rates[model].append(average_positive_rate)
-        # _, lower, upper = bootstrap(model_annotations, statistic=calculate_win_rate)
-        # confidence_interval[model].append((upper-average_positive_rate, lower-average_positive_rate, upper, lower))
+        _, lower, upper = bootstrap(model_annotations, statistic=calculate_win_rate)
+        confidence_interval[model].append((upper-average_positive_rate, lower-average_positive_rate, upper, lower))
         annotations[model].append(model_annotations)
 
     # calculate ranking
@@ -164,29 +166,29 @@ def main(args):
                     break
             i += 1 + newly_added
 
-    # rankings = defaultdict(list)
-    # for cat_index, cat in enumerate((nr_category + ["Average"])):
-    #     # sort data by average
-    #     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
-    #     sorted_ci = [[m] + confidence_interval[m] for m in sorted_positive_rates]
+    rankings = defaultdict(list)
+    for cat_index, cat in enumerate((nr_category + ["Average"])):
+        # sort data by average
+        sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][cat_index], reverse=True))
+        sorted_ci = [[m] + confidence_interval[m] for m in sorted_positive_rates]
 
-    #     # decide distinguishibility ranking
-    #     i = 0
-    #     while i < len(sorted_ci):
-    #         model_name = sorted_ci[i][0]
-    #         cur_confidence_interval = sorted_ci[i][cat_index+1]
-    #         # decide if the following model is distinguishable from the current
-    #         rankings[model_name].append(i+1)
-    #         newly_added = 0
-    #         for j in range(i + 1, len(sorted_ci), 1):
-    #             next_model_name = sorted_ci[j][0]
-    #             next_confidence_interval = sorted_ci[j][cat_index+1]
-    #             if not decide_is_distinguishable(cur_confidence_interval, next_confidence_interval):
-    #                 rankings[next_model_name].append(i+1)
-    #                 newly_added += 1
-    #             else:
-    #                 break
-    #         i += 1 + newly_added
+        # decide distinguishibility ranking
+        i = 0
+        while i < len(sorted_ci):
+            model_name = sorted_ci[i][0]
+            cur_confidence_interval = sorted_ci[i][cat_index+1]
+            # decide if the following model is distinguishable from the current
+            rankings[model_name].append(i+1)
+            newly_added = 0
+            for j in range(i + 1, len(sorted_ci), 1):
+                next_model_name = sorted_ci[j][0]
+                next_confidence_interval = sorted_ci[j][cat_index+1]
+                if not decide_is_distinguishable(cur_confidence_interval, next_confidence_interval):
+                    rankings[next_model_name].append(i+1)
+                    newly_added += 1
+                else:
+                    break
+            i += 1 + newly_added
 
     # add rankings and sort by average finally
     sorted_positive_rates = dict(sorted(positive_rates.items(), key=lambda x: x[1][-1], reverse=True))
@@ -198,11 +200,11 @@ def main(args):
     for row in sorted_results:
         leaderboard_csv.writerow(row)
 
-    # # output a p-value plot
-    # generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
-    #                     os.path.join(args.save_dir, "p-value_plot.png"))
+    # output a p-value plot
+    generate_ttest_plot({m: annotation_list[-1] for m, annotation_list in annotations.items()}, 
+                        os.path.join(args.save_dir, "p-value_plot.png"))
     
-    # # Latex code
+    # Generate Overleaf Table
     # int_to_letter = {
     #     '0': 'a', '1': 'b', '2': 'c', '3': 'd', '4': 'e',
     #     '5': 'f', '6': 'g', '7': 'h', '8': 'i', '9': 'j'
@@ -224,13 +226,14 @@ def main(args):
     #     "Ranking": "rk" 
     # }
 
+    # 
     # # split = "dev"
-    # # split = "test"
+    # split = "test"
 
     # all_commands = []
     # table_row = []
     # for model in sorted_positive_rates:
-    #     # Generate Overleaf
+        
     #     overall_outputs = {} 
     #     for i, category in enumerate(nr_category):
     #         overall_outputs[category] = positive_rates[model][i]
@@ -253,7 +256,8 @@ def main(args):
     #         all_commands.append(command_template.replace('cmd', categorical_command).replace('num', num))
     #         categorical_commands.append(categorical_command)
         
-    #     row_string = model.split("-t=")[0] + f"({overall_outputs['Ranking']})"
+    #     # row_string = model.split("-t=")[0] + f"({overall_outputs['Ranking']})"
+    #     row_string = f"{overall_outputs['Ranking']} & " + model.split("-t=")[0] 
     #     for i, cmd in enumerate(categorical_commands):
     #         if i == len(categorical_commands) - 1:
     #             break
@@ -283,7 +287,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--annotator",
         type=str,
-        default='ahref',
+        default='href',
         help="Name of the evaluator that generated the annotation results."
     )
 

@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 ANNOTATOR_SUITE_DICT = {
-    "ahref": {
+    "href": {
         "Brainstorm": {
             "annotator": "llama3.1-70b_basic_no_reference",
             "use_human_ref": False,
@@ -47,7 +47,7 @@ ANNOTATOR_SUITE_DICT = {
             "use_human_ref": True,
         },
     },
-    "ahref_7b": {
+    "href_7b": {
         "Brainstorm": {
             "annotator": "llama3.1_basic_no_reference",
             "use_human_ref": False,

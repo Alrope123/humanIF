@@ -1,5 +1,5 @@
-model_name_or_path: allenai/Llama-3.1-Tulu-3-8B-RM
-tokenizer_name_or_path: allenai/Llama-3.1-Tulu-3-8B-RM
+model_name_or_path: allenai/OLMo-2-1124-7B-Instruct
+tokenizer_name_or_path: allenai/OLMo-2-1124-7B-Instruct
 use_vllm: true
 use_slow_tokenizer: false
 max_new_tokens: 8192

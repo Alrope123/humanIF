@@ -4,7 +4,7 @@
 
 <div align="center">
 
-📑 [Paper]() | 🤗 [Leaderboard]() | 🤗 [Validation Set]() | 🤗 [Human Agreement Set]()
+📑 [Paper]() | 🤗 [Leaderboard]() | 🤗 [Development Set]() | 🤗 [Human Agreement Set]()
 
  <img src="assets/logo_cropped.webp" alt="HREF logo" height="300"/>
 </div>
@@ -29,11 +29,11 @@ pip install -e .
 ```
 
 ## Quick Start 🏃 
-To evaluate a supported model on href validation set (See a list under `href/generation/configs`), run:
+To evaluate a supported model on href development set (See a list under `href/generation/configs`), run:
 ```bash
 href evaluate \
     --model_name Llama-3.1-8B-Instruct \
-    --annotator ahref
+    --annotator href
 ```
 
 
@@ -51,7 +51,7 @@ href evaluate \
 
 - `--model_name`❗: the model name that corresponds to the name of the yaml configuration file under `generation_config_dir` (exclude `.yaml`).
 - `--generation_config_dir`: the directory that contains the model generation configuration files.
-- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Default to use the validation set of HREF.
+- `--dataset`: the huggingface dataset name or the path to a local file to use for evaluation. Default to use the development set of HREF.
 - `--split`: the split to use in `dataset`. Default to be `dev`.
 - `--nr_cateogry`: categories in the HREF to include. Default to use all 8 categories.
 - `--seed`: random seed.
@@ -62,14 +62,14 @@ href evaluate \
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `href` that we defined in our paper.
 - `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
 - `--use_human_reference`❗: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>
 
 
 ### Evaluate a custom model
-There are several ways to evaluate your own model/tokenizer on the validation set:
+There are several ways to evaluate your own model/tokenizer on the development set:
 
 <!-- - `--response_dir`: the directory that contains pre-generated model outputs. If specified, we will skip output generation and jump directly into evaluation. -->
 
@@ -94,7 +94,7 @@ Now run:
 ```bash
 href evaluate \
     --model_name <your configuration file name> \
-    --annotator ahref \ 
+    --annotator href \ 
     --generation_config_dir < directory cotaining your file>
 ```
 
@@ -119,7 +119,7 @@ where each data point in responses.jsonl contains the fields: `instruction`, `ou
 href evaluate \
     --model_name <any custom model name> \
     --response_dir <your response directory> \
-    --annotator ahref 
+    --annotator href 
 ``` 
 
 #### Option 3: add an API model other than OpenAI
@@ -171,7 +171,7 @@ href calculate_agreement \
 <details>
 <summary> Evaluation arguments </summary>
 
-- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `ahref` that we defined in our paper.
+- `annotator`❗: name of the evaluation methods. It has to be one the three following: 1. a basic annotator defined in `evaluation/evaluators.DEFINED_ANNOTATORS`. 2. a configuration name for llm_as_a_judge that corresponds to a directory in `llm_as_a_judge`. 3. a suite of the above two types of unit evaluators defined in `evaluation/evaluators.DEFINED_ANNOTATOR_SUITE_DICT`. Default to be suite `href` that we defined in our paper.
 - `--config_dir`: the directory to contain configures for llm_as_a_judge evaluators.
 - `--use_human_reference`❗: whether of not `annotator` needs to use the human reference. No need to specify if `annotator` specifies a evaluator suite. 
 </details>

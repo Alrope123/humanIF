@@ -163,7 +163,7 @@ def upload(args):
         model = result[0]
         # get model path
         config_path = os.path.join(args.config_dir, f"{model}.yaml")
-        assert os.path.exists(config_path), 'Did not find generation configuration.'
+        assert os.path.exists(config_path), f'Did not find generation configuration at {config_path}.'
         with open(config_path, 'r') as f:
             config = yaml.safe_load(f)
         output_json = {"path": config['model_name_or_path']}
@@ -200,7 +200,7 @@ def main():
     parser.add_argument(
         "--annotator",
         type=str,
-        default='ahref',
+        default='href',
         help="Name of the evaluator that generated the annotation results."
     )
     parser.add_argument(

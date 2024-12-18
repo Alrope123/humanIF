@@ -7,3 +7,5 @@ beaker_configs/auto_created
 commands*.sh
 logs
 cache
+deprecated
+private

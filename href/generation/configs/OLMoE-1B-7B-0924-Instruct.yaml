@@ -1,5 +1,5 @@
-model_name_or_path: princeton-nlp/gemma-2-9b-it-SimPO
-tokenizer_name_or_path: princeton-nlp/gemma-2-9b-it-SimPO
+model_name_or_path: allenai/OLMoE-1B-7B-0924-Instruct
+tokenizer_name_or_path: allenai/OLMoE-1B-7B-0924-Instruct
 use_vllm: true
 use_slow_tokenizer: false
 max_new_tokens: 8192
